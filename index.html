@@ -643,7 +643,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-e';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-f';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -795,6 +795,46 @@ function loadTess(){
   });
   return tessReady;
 }
+/* 読み取った語を、座標を手がかりに「行」へ組み直す。
+   表の写真だと Tesseract は読む順番がばらばらになるので、
+   ・上下（y）が近い語を同じ行にまとめ
+   ・行の中は左から右（x）に並べ直す
+   これをしないと「品名」と「数量」が別々の行に散る。 */
+function wordsToLines(data){
+  var ws=[];
+  (data.blocks||[]).forEach(function(b){ (b.paragraphs||[]).forEach(function(pg){
+    (pg.lines||[]).forEach(function(ln){ (ln.words||[]).forEach(function(w){
+      if(!w.text || !w.text.trim()) return;
+      if(w.confidence!=null && w.confidence<40) return;
+      var bb=w.bbox||{};
+      if(bb.x0==null) return;
+      ws.push({t:w.text.trim(), x0:bb.x0, x1:bb.x1,
+               cy:(bb.y0+bb.y1)/2, h:Math.max(1,bb.y1-bb.y0)});
+    }); });
+  }); });
+  if(!ws.length) return null;
+  var hs=ws.map(function(w){return w.h;}).sort(function(a,b){return a-b;});
+  var mh=hs[Math.floor(hs.length/2)];        /* 文字の高さの中央値 */
+  var tol=Math.max(8, mh*0.65);              /* これ以内の上下差は同じ行とみなす */
+  ws.sort(function(a,b){ return a.cy-b.cy; });
+  var rows=[], cur=[ws[0]], base=ws[0].cy;
+  for(var i=1;i<ws.length;i++){
+    if(Math.abs(ws[i].cy-base)<=tol){ cur.push(ws[i]); base=(base*(cur.length-1)+ws[i].cy)/cur.length; }
+    else { rows.push(cur); cur=[ws[i]]; base=ws[i].cy; }
+  }
+  rows.push(cur);
+  return rows.map(function(r){
+    r.sort(function(a,b){ return a.x0-b.x0; });
+    var out='', prev=null;
+    r.forEach(function(w){
+      /* 列の境目とみられるほど離れていたら、区切りの空白を入れる */
+      if(prev!==null && (w.x0-prev) > mh*1.2) out+=' ';
+      out+=w.t; prev=w.x1;
+    });
+    return out.replace(/[ \u3000]{2,}/g,' ').trim();
+  }).filter(function(l){ return l && l.length>1; });
+}
+
 function ocrStat(pct,msg){
   document.getElementById('ocrProg').style.display='block';
   document.getElementById('ocrBar').style.width=Math.round(pct*100)+'%';
