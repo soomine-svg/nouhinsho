@@ -191,7 +191,11 @@ table.nou td.lbl{text-align:center}
     <div style="font-size:20px;font-weight:700;color:#e65100;margin-bottom:10px">まず、台帳を入れてください</div>
     <p style="margin:0 0 14px">取引先や商品がまだ入っていません。受け取った<b>台帳ファイル</b>を読み込むと、すぐ使えるようになります。</p>
     <button class="btn big" onclick="document.getElementById('impFile').click()">台帳ファイルを読み込む</button>
-    <p class="hint" style="margin:14px 0 0">ファイルが手元にない場合は、「③設定」で取引先と商品を1つずつ入れることもできます。</p>
+    <p class="hint" style="margin:14px 0 0">
+      受け取った台帳ファイル（名前が <b>.json</b> で終わるもの）をえらんでください。<br>
+      <b>紙の卸率表の写真から入れたい場合は</b>、下のボタンから進んでください。ファイルが無い場合も同じです。
+    </p>
+    <button class="btn sub" style="margin-top:8px" onclick="gotoBulk()">紙の表の写真を見ながら入れる／手で入れる</button>
   </div>
 
   <div class="step">
@@ -285,7 +289,7 @@ table.nou td.lbl{text-align:center}
           または
           <div style="margin-top:12px">
             <button class="btn" onclick="document.getElementById('imgFile').click()">パソコンから写真・ファイルをえらぶ</button>
-            <input id="imgFile" type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
+            <input id="imgFile" type="file" accept="image/*,.heic,.HEIC,.heif,.HEIF,.jpg,.JPG,.jpeg,.JPEG,.png,.PNG,.pdf,.PDF" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
           </div>
           <div style="margin-top:12px;font-size:14px">写真（JPEG・PNG）とPDFが使えます。</div>
         </div>
@@ -444,7 +448,7 @@ table.nou td.lbl{text-align:center}
         <div>
           <label>写真（iPhoneのHEICもそのまま使えます）</label>
           <button class="btn sub" onclick="document.getElementById('bulkImg').click()">写真をえらんで左に出す</button>
-          <input id="bulkImg" type="file" accept="image/*,.heic,.heif,.pdf" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
+          <input id="bulkImg" type="file" accept="image/*,.heic,.HEIC,.heif,.HEIF,.jpg,.JPG,.jpeg,.JPEG,.png,.PNG,.pdf,.PDF" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
         </div>
       </div>
 
@@ -493,7 +497,7 @@ table.nou td.lbl{text-align:center}
       <div class="hint">別のパソコンで使うときや、バックアップを取るときに使います。</div>
       <button class="btn sub" onclick="exportData()">ファイルに書き出す</button>
       <button class="btn sub" onclick="document.getElementById('impFile').click()">ファイルから読み込む</button>
-      <input id="impFile" type="file" accept=".json" style="display:none" onchange="importData(this)">
+      <input id="impFile" type="file" accept=".json,.JSON,image/*,.heic,.HEIC,.heif,.HEIF,.jpg,.JPG,.jpeg,.JPEG,.png,.PNG,.pdf,.PDF" style="display:none" onchange="importData(this)">
       <button class="btn sub" onclick="restorePrev()" id="prevBtn">ひとつ前の状態に戻す</button>
       <button class="btn danger" onclick="resetData()">最初の状態に戻す</button>
       <div id="dataMsg" class="msg"></div>
@@ -622,7 +626,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-b';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-c';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1631,8 +1635,32 @@ function exportData(){
   a.click(); URL.revokeObjectURL(a.href);
   flash('dataMsg','ファイルに書き出しました（ダウンロードのフォルダに入ります）。',true);
 }
+/* 「まとめて入れる」画面へ移動する */
+function gotoBulk(){
+  showPage('master');
+  var el=document.getElementById('bulkImg');
+  if(el) el.closest('.step').scrollIntoView({block:'start',behavior:'smooth'});
+}
 function importData(input){
   var f=input.files[0]; if(!f) return;
+  var nm=(f.name||''), ext=(nm.split('.').pop()||'').toLowerCase();
+  /* 写真やPDFをえらんだときは、エラーにせず正しい場所へ案内する */
+  if(ext!=='json'){
+    input.value='';
+    if(/^(heic|heif|jpg|jpeg|png|gif|webp|bmp|pdf)$/.test(ext)){
+      if(confirm('「'+nm+'」は写真（またはPDF）ですね。\n\n'+
+        'ここは、受け取った台帳ファイル（.json）を読み込むところです。\n'+
+        '紙の表の写真から入れる場合は、「まとめて入れる」の画面へご案内します。\n\nそちらへ移動しますか？')){
+        gotoBulk();
+        setTimeout(function(){
+          var dt=new DataTransfer(); dt.items.add(f); addImgs(dt.files);
+        },400);
+      }
+      return;
+    }
+    alert('「'+nm+'」は読み込めません。\n受け取った台帳ファイル（名前が .json で終わるもの）をえらんでください。');
+    return;
+  }
   var r=new FileReader();
   r.onload=function(){
     try{
