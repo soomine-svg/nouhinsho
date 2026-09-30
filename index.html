@@ -855,6 +855,7 @@ table.nou td.lbl{text-align:center}
             作ったときの中身（取引先・お届け先・商品・数量・備考・書き添えることば）がそのまま戻ってきます。<br>
             直したら「<b>出した書類に保存する</b>」を押します。<b>同じ伝票番号のまま差し替わります</b>（番号は進みません）。<br>
             直した内容は、<b>合計請求書の集計にもそのまま反映されます。</b><br>
+            納品書を直すと、<b>そこから出した請求書も同時に直ります。</b>請求書を別に直す必要はありません。<br>
             やめたいときは、紫の帯の「やめる」を押してください。もとの書類はそのまま残ります。</td></tr>
           <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td><b>いつもの流れはこうです。</b><br>
             ① 納品書をつくる　② 印刷する（PDFで保存する）　③ <b>「出した書類に保存する」を押す</b>　…これを月内くり返す<br>
@@ -865,8 +866,9 @@ table.nou td.lbl{text-align:center}
             納品書から請求書を出してあるときは、<b>請求書のほうだけが並びます</b>（同じ番号を二重に数えません）。</td></tr>
           <tr><td>請求書をつくりたい</td><td>先に納品書をつくって保存します。そのあと「② 出した書類」で、その納品書の行の<b>オレンジの「請求書」</b>を押してください。<br>
             納品書の中身がそのまま入った請求書が出ます。<b>請求日</b>をたしかめて、「印刷する」→「出した書類に保存する」の順に押します。<br>
-            すでに請求書を出してある納品書は、ボタンが<b>「請求書を直す」</b>に変わります。<br>
-            ※ 請求書を出したあとで納品書を直しても、請求書は自動では変わりません。「請求書を直す」で同じように直してください。<br>
+            すでに請求書を出してある納品書は、ボタンのかわりに<b>「請求書 発行済」</b>と出ます。<br>
+            <b>請求書を出したあとで納品書を直すと、請求書も同時に同じ内容に直ります</b>（請求日は請求書のものが残ります）。<br>
+            請求日を変えたいときは、請求書の行の「直す」を押してください。<br>
             請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
             振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
             <b>請求書の番号は、もとの納品書と同じです。</b>合計請求書だけ別の通し番号です。</td></tr>
@@ -918,7 +920,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-r';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-s';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -2144,9 +2146,31 @@ function replaceHistory(rec){
   S.history.forEach(function(h,k){ if(h.id===editingId) i=k; });
   if(i<0){ S.history.unshift(rec); }
   else { rec.id=editingId; S.history[i]=rec; }
+  var synced = (rec.kind==='nou') && syncInvoice(rec);
   save(); endEdit();
-  flash('printMsg','No.'+esc(rec.no)+' を差し替えました。番号は変わっていません。',true);
+  flash('printMsg','No.'+esc(rec.no)+' を差し替えました。番号は変わっていません。'+
+    (synced?'　対になる請求書 No.'+esc(rec.no)+' も、同じ内容に直しました。':''),true);
   renderHistory();
+}
+/* 納品書を直したら、そこから出した請求書も同じ中身にそろえる（2026-10-01 本人指示）。
+   請求日だけは請求書のものを残す。紙（html）は、いまの画面の中身を請求書の形で描き直してつくる。 */
+function syncInvoice(nou){
+  var sei=S.history.filter(function(h){ return h.kind==='sei' && h.fromId===nou.id; })[0];
+  if(!sei) return false;
+  var e=document.getElementById('inKind'), d=document.getElementById('inDate');
+  var keepKind=e.value, keepDate=d.value;
+  var o=e.querySelector('option[value="sei"]'), added=false;
+  if(!o){ o=document.createElement('option'); o.value='sei'; o.textContent='請求書'; e.appendChild(o); added=true; }
+  e.value='sei'; d.value=sei.date||keepDate;
+  var html=sheetHTML();
+  e.value=keepKind; d.value=keepDate;
+  if(added) e.removeChild(o);
+  ['no','partner','partnerId','sub','subId','rate','mixed','subAmount','tax','taxRate','total',
+   'notes','ovFrom','ovWhy'].forEach(function(k){ sei[k]=nou[k]; });
+  sei.lines=JSON.parse(JSON.stringify(nou.lines||[]));
+  sei.ov=nou.ov? JSON.parse(JSON.stringify(nou.ov)) : nou.ov;
+  sei.html=html;
+  return true;
 }
 function editHistory(id){
   var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
@@ -2258,7 +2282,8 @@ function showEditBar(h){
   b.style.display='block';
   b.innerHTML='<b>✎ 「'+esc(h.kindName)+' No.'+esc(h.no)+'」を直しています。</b>'+
     '<span style="font-weight:400">　直したら「出した書類に保存する」を押してください。'+
-    '同じ番号のまま差し替わります。</span>'+
+    '同じ番号のまま差し替わります。'+
+    ((h.kind==='nou' && invoicedIds()[h.id])?'<b>この納品書から出した請求書も、同時に直ります。</b>':'')+'</span>'+
     '<button class="btn sub" style="margin-left:12px" onclick="cancelEdit()">やめる</button>';
 }
 function endEdit(){
@@ -2391,7 +2416,8 @@ function renderHistory(){
     '<th class="num">卸率</th><th class="num">合計</th><th></th></tr></thead><tbody>'+
     S.history.map(function(h){
       var inv = h.kind!=='nou' ? ''
-              : '<button class="btn sm" style="background:#ef6c00" onclick="invoiceFrom(\''+h.id+'\')">'+(done[h.id]?'請求書を直す':'請求書')+'</button> ';
+              : (done[h.id] ? '<span style="display:inline-block;padding:4px 10px;margin-right:4px;border:1.5px solid #ef6c00;border-radius:7px;color:#e65100;font-size:14px;font-weight:700">請求書 発行済</span> '
+              : '<button class="btn sm" style="background:#ef6c00" onclick="invoiceFrom(\''+h.id+'\')">請求書</button> ');
       var rt = h.mixed ? '商品ごと'
              : (h.ovFrom!=null ? '<span style="color:#e65100;font-weight:700">'+h.rate+'％</span><br><span style="font-size:12px;color:#e65100">いつもは'+h.ovFrom+'％'+(h.ovWhy?'<br>'+esc(h.ovWhy):'')+'</span>'
              : h.rate+'％');
