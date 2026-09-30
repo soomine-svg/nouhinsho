@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>納品書 作成システム</title>
+<style>
+:root{
+  --bg:#f4f6f9; --panel:#ffffff; --line:#c9d2dd; --ink:#1a2330; --sub:#5a6b7d;
+  --accent:#1565c0; --accent-d:#0d47a1; --ok:#2e7d32; --warn:#c62828; --soft:#eaf2fb;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;font-size:17px;line-height:1.7}
+h1,h2,h3{margin:0}
+button{font-family:inherit;font-size:17px;cursor:pointer}
+
+/* ===== ヘッダー・タブ ===== */
+.head{background:#fff;border-bottom:3px solid var(--accent);padding:14px 20px;
+  display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+.head h1{font-size:24px;font-weight:700;letter-spacing:.04em}
+.head .co{color:var(--sub);font-size:15px}
+.tabs{display:flex;gap:10px;padding:14px 20px 0;flex-wrap:wrap}
+.tabs button{background:#dde5ee;border:2px solid transparent;border-bottom:none;
+  padding:12px 24px;border-radius:12px 12px 0 0;font-weight:700;color:#41526a}
+.tabs button.on{background:#fff;border-color:var(--line);color:var(--accent-d)}
+main{padding:0 20px 60px}
+.page{display:none;background:#fff;border:2px solid var(--line);border-radius:0 12px 12px 12px;padding:22px}
+.page.on{display:block}
+
+/* ===== ステップ ===== */
+.step{border:2px solid var(--line);border-radius:12px;margin-bottom:20px;overflow:hidden}
+.step>h2{background:var(--soft);padding:12px 18px;font-size:19px;color:var(--accent-d);
+  border-bottom:2px solid var(--line);display:flex;align-items:center;gap:12px}
+.step>h2 .n{background:var(--accent);color:#fff;width:34px;height:34px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.step .body{padding:18px}
+.hint{color:var(--sub);font-size:15px;margin:6px 0 12px}
+
+label{font-weight:700;display:block;margin-bottom:5px}
+select,input[type=text],input[type=number],input[type=date],textarea{
+  font-family:inherit;font-size:17px;padding:10px 12px;border:2px solid var(--line);
+  border-radius:8px;background:#fff;color:var(--ink);max-width:100%}
+select:focus,input:focus,textarea:focus{outline:3px solid #90c2f5;border-color:var(--accent)}
+select.big{font-size:19px;padding:12px;min-width:min(480px,100%)}
+textarea{width:100%;min-height:130px;line-height:1.8}
+
+.btn{background:var(--accent);color:#fff;border:none;padding:12px 26px;border-radius:9px;font-weight:700}
+.btn:hover{background:var(--accent-d)}
+.btn.sub{background:#fff;color:var(--accent-d);border:2px solid var(--accent)}
+.btn.sub:hover{background:var(--soft)}
+.btn.danger{background:#fff;color:var(--warn);border:2px solid var(--warn)}
+.btn.big{font-size:21px;padding:18px 44px;border-radius:12px}
+.btn.sm{padding:6px 14px;font-size:15px;border-radius:7px}
+.row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px}
+.row>div{display:flex;flex-direction:column}
+
+.info{background:var(--soft);border:2px solid #b6d4f2;border-radius:10px;padding:14px 18px;margin-top:14px}
+.info .rate{font-size:30px;font-weight:700;color:var(--accent-d)}
+.info dl{margin:6px 0 0;display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:15px}
+.info dt{color:var(--sub)}
+.info dd{margin:0}
+
+.pick{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.pick button{background:#eef2f7;border:2px solid var(--line);border-radius:9px;padding:10px 18px;font-weight:700;color:#41526a}
+.pick button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.pane{display:none}
+.pane.on{display:block}
+
+table.grid{width:100%;border-collapse:collapse;margin-top:10px;font-size:16px}
+table.grid th,table.grid td{border:1px solid var(--line);padding:8px 10px;text-align:left}
+#lineWrap,#pTable,#sTable,#gTable,#histWrap{overflow-x:auto}
+#lineWrap table.grid{min-width:760px}
+table.grid th{background:#eef2f7;font-size:15px;white-space:nowrap}
+table.grid td.num,table.grid th.num{text-align:right;white-space:nowrap}
+table.grid tr.miss td{background:#fdecec}
+.empty{color:var(--sub);text-align:center;padding:26px;background:#fafbfd;border:2px dashed var(--line);border-radius:10px}
+
+.totals{margin-top:16px;display:flex;justify-content:flex-end}
+.totals table{border-collapse:collapse;font-size:18px}
+.totals td{padding:8px 18px;border:1px solid var(--line)}
+.totals tr.sum td{background:#eaf2fb;font-size:24px;font-weight:700;color:var(--accent-d)}
+.msg{margin-top:12px;padding:10px 14px;border-radius:8px;font-weight:700;display:none}
+.msg.ok{background:#e8f5e9;color:var(--ok);border:2px solid #a5d6a7;display:block}
+.msg.ng{background:#fdecec;color:var(--warn);border:2px solid #ef9a9a;display:block}
+.note{background:#fff8e1;border:2px solid #ffe082;border-radius:10px;padding:12px 16px;font-size:15px;margin-bottom:16px}
+.warnbox{background:#fff4e5;border:2px solid #ffb74d;border-radius:10px;padding:14px 18px;margin-top:10px}
+.chk{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;font-size:18px}
+.chk input{width:22px;height:22px;cursor:pointer}
+td.ov input{background:#fff4e5;border-color:#ff9800;font-weight:700}
+.picker{border:2px solid var(--line);border-radius:10px;padding:14px;background:#fafbfd}
+.picker h4{margin:0 0 8px;font-size:15px;color:var(--sub);font-weight:700}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.chip{background:#fff;border:2px solid var(--line);border-radius:9px;padding:10px 18px;font-weight:700;color:#41526a;font-size:17px}
+.chip:hover{border-color:var(--accent);background:var(--soft)}
+.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chip.spec{border-color:#7cb342;color:#33691e}
+.chip.spec:hover{background:#f1f8e9;border-color:#558b2f}
+.chip .p{font-weight:400;font-size:14px;color:#6a7a8a;margin-left:8px}
+.chip.spec .p{color:#558b2f}
+.chip.none{opacity:.55;pointer-events:none;border-style:dashed}
+
+/* ===== 発注書の画像パネル ===== */
+#imgPanel{display:none;position:fixed;left:0;top:0;width:46vw;height:100vh;z-index:50;
+  background:#2b3644;color:#fff;flex-direction:column;box-shadow:3px 0 14px rgba(0,0,0,.25)}
+body.withimg{padding-left:46vw}
+body.withimg #imgPanel{display:flex}
+#imgBar{display:flex;align-items:center;gap:6px;padding:8px 10px;background:#1e2733;flex-wrap:wrap;flex:none}
+#imgBar button{background:#41526a;color:#fff;border:none;border-radius:7px;padding:8px 13px;font-size:15px;font-weight:700}
+#imgBar button:hover{background:#5a6f8e}
+#imgBar .name{font-size:13px;color:#b9c6d6;margin-left:auto;max-width:40%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#imgStage{flex:1;overflow:auto;background:#3a4657;display:flex;align-items:flex-start;justify-content:center;padding:10px}
+#imgStage img{display:block;transform-origin:top center;background:#fff}
+#imgStage iframe{width:100%;height:100%;border:0;background:#fff}
+#imgStage .bad{color:#ffd54f;padding:30px;text-align:center;line-height:2;font-weight:700}
+.drop{border:3px dashed var(--line);border-radius:12px;padding:34px 20px;text-align:center;background:#fafbfd;color:var(--sub)}
+.drop.over{border-color:var(--accent);background:var(--soft);color:var(--accent-d)}
+.drop b{display:block;font-size:19px;color:var(--ink);margin-bottom:6px}
+@media(max-width:900px){
+  #imgPanel{position:static;width:auto;height:62vh}
+  body.withimg{padding-left:0}
+}
+
+/* ===== 納品書プレビュー／印刷 ===== */
+#printArea{display:none}
+.sheet{width:190mm;margin:0 auto;background:#fff;color:#000;padding:4mm 0;
+  font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:11pt;line-height:1.5}
+.sheet .no{text-align:right;font-size:11pt;margin-bottom:2mm}
+.sheet .ttl{text-align:center;font-size:22pt;letter-spacing:1em;text-indent:1em;margin:0 0 3mm}
+.sheet .topgrid{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:3mm;gap:8mm}
+.sheet .to{flex:1}
+.sheet .to .name{font-size:17pt;border-bottom:1px solid #000;padding-bottom:1mm;margin-bottom:1mm}
+.sheet .to .name span{font-size:12pt;margin-left:8mm}
+.sheet .to .sm{font-size:9pt}
+.sheet .from{text-align:left;font-size:10pt;white-space:nowrap}
+.sheet .from .co{font-size:17pt;letter-spacing:.2em;margin:1mm 0}
+.sheet .date{text-align:right;font-size:11pt;margin-bottom:3mm}
+table.nou{width:100%;border-collapse:collapse;font-size:10.5pt}
+table.nou th,table.nou td{border:1px solid #000;padding:1.3mm 2mm;height:7mm}
+table.nou th{text-align:center;font-weight:400}
+table.nou .c-no{width:9mm;text-align:center}
+table.nou .c-qty{width:16mm;text-align:right}
+table.nou .c-list{width:26mm;text-align:right}
+table.nou .c-amt{width:30mm;text-align:right}
+table.nou .c-memo{width:34mm;font-size:9pt;line-height:1.3}
+table.nou td.lbl{text-align:center}
+
+@media print{
+  @page{size:A4 portrait;margin:11mm}
+  body{background:#fff}
+  .head,.tabs,main,#imgPanel,#storeWarn{display:none !important}
+  body.withimg{padding-left:0 !important}
+  #printArea{display:block !important}
+  .sheet{width:auto;padding:0}
+}
+</style>
+</head>
+<body>
+
+<div class="head">
+  <h1>納品書 作成システム</h1>
+  <div class="co" id="headCo"></div>
+</div>
+
+<div id="storeWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
+  ⚠ このパソコンでは、台帳の自動保存ができません。<br>
+  <span style="font-weight:400">画面を閉じると、足した取引先や商品が消えます。作業のあとに必ず
+  「③設定 → E データの持ち出し → ファイルに書き出す」をして、次に開いたときに「ファイルから読み込む」をしてください。</span>
+</div>
+
+<div class="tabs">
+  <button id="tabCreate"  class="on" onclick="showPage('create')">① 納品書をつくる</button>
+  <button id="tabHistory"           onclick="showPage('history')">② 出した納品書</button>
+  <button id="tabMaster"            onclick="showPage('master')">③ 設定（取引先・商品）</button>
+  <button id="tabHelp"              onclick="showPage('help')">④ 使い方</button>
+</div>
+
+<main>
+
+<!-- ============ ① 納品書をつくる ============ -->
+<section id="page-create" class="page on">
+
+  <div id="setupBox" class="warnbox" style="display:none;margin-bottom:20px;padding:20px 24px">
+    <div style="font-size:20px;font-weight:700;color:#e65100;margin-bottom:10px">まず、台帳を入れてください</div>
+    <p style="margin:0 0 14px">取引先や商品がまだ入っていません。受け取った<b>台帳ファイル</b>を読み込むと、すぐ使えるようになります。</p>
+    <button class="btn big" onclick="document.getElementById('impFile').click()">台帳ファイルを読み込む</button>
+    <p class="hint" style="margin:14px 0 0">ファイルが手元にない場合は、「③設定」で取引先と商品を1つずつ入れることもできます。</p>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">1</span>お届け先をえらぶ</h2>
+    <div class="body">
+      <label for="selPartner">取引先（納品書の宛名になります）</label>
+      <select id="selPartner" class="big" onchange="onPartner()"></select>
+
+      <div id="subWrap" style="margin-top:16px;display:none">
+        <label for="selSub">その先のお届け先（ここで卸率が決まります）</label>
+        <select id="selSub" class="big" onchange="onSub()"></select>
+        <div class="hint">一覧にない場合は「― 基本の卸率を使う ―」を選んでください。</div>
+      </div>
+
+      <div class="info" id="rateInfo" style="display:none">
+        <div>この納品書の卸率 <span class="rate" id="rateNow">―</span> <span style="font-size:20px;font-weight:700">％</span> <span id="rateTag" style="font-size:15px"></span></div>
+        <dl>
+          <dt>締日</dt><dd id="infoClose">―</dd>
+          <dt>入金日</dt><dd id="infoPay">―</dd>
+          <dt>インボイス登録番号</dt><dd id="infoInv">―</dd>
+          <dt>覚え書き</dt><dd id="infoMemo">―</dd>
+        </dl>
+      </div>
+
+      <div id="ovWrap" style="margin-top:16px;display:none">
+        <label class="chk"><input type="checkbox" id="chkRate" onchange="onRateOv()"> この納品書だけ、卸率をいつもと変える</label>
+        <div id="rateOvBox" class="warnbox" style="display:none">
+          <div class="row" style="margin-bottom:0">
+            <div><label>この納品書の卸率（％）</label><input id="inRateOv" type="number" min="0" max="100" style="width:140px" onchange="renderAll()"></div>
+            <div style="flex:1;min-width:260px"><label>変えた理由（記録に残ります）</label><input id="inRateWhy" type="text" style="width:100%" placeholder="例）今回のみ特別対応"></div>
+          </div>
+          <div class="hint" style="margin:10px 0 0">※ 商品ごとに卸率を変えたいときは、下の明細表の「卸率」らんを直してください。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">2</span>商品を入れる</h2>
+    <div class="body">
+      <div class="pick">
+        <button id="mdList"  class="on" onclick="mode('list')">一覧からえらぶ</button>
+        <button id="mdPaste"           onclick="mode('paste')">発注書を貼りつける</button>
+        <button id="mdHand"            onclick="mode('hand')">手で入力する</button>
+        <button id="mdImg"             onclick="mode('img')">発注書の画像を見ながら入れる</button>
+      </div>
+
+      <div id="pane-list" class="pane on">
+        <div class="row" style="margin-bottom:14px">
+          <div style="flex:1;min-width:280px">
+            <label for="inFind">商品をさがす（打つと下がしぼられます）</label>
+            <input id="inFind" type="text" style="width:100%" placeholder="商品名の一部を打つと、しぼられます" oninput="renderPicker()">
+          </div>
+          <div><label for="inQty">数量</label><input id="inQty" type="number" value="1" min="1" style="width:110px"></div>
+          <div style="flex:1;min-width:200px"><label for="inMemo">備考（なくてもOK）</label><input id="inMemo" type="text" style="width:100%" placeholder="例）担当者名など"></div>
+          <div><button class="btn sub" onclick="document.getElementById('inFind').value='';pick.group='';renderPicker()">しぼりこみを消す</button></div>
+        </div>
+        <div class="picker">
+          <h4>① 商品をえらぶ</h4>
+          <div class="chips" id="chipGroups"></div>
+          <h4 id="specTitle">② 大きさ・内容量をえらぶと、明細に入ります</h4>
+          <div class="chips" id="chipSpecs"></div>
+        </div>
+      </div>
+
+      <div id="pane-paste" class="pane">
+        <div class="hint">発注書の中身を、1行に1商品ずつ貼りつけてください。「商品名 数量」の形でも、「商品名,数量,備考」の形でも読み取れます。</div>
+        <textarea id="txtPaste" placeholder="商品名 数量&#10;商品名,数量,備考&#10;商品名 × 3"></textarea>
+        <div style="margin-top:12px">
+          <button class="btn" onclick="readPaste()">読み取って明細に入れる</button>
+          <button class="btn sub" onclick="document.getElementById('txtPaste').value=''">貼りつけ欄を消す</button>
+        </div>
+        <div id="pasteMsg" class="msg"></div>
+      </div>
+
+      <div id="pane-hand" class="pane">
+        <div class="row">
+          <div style="flex:1;min-width:220px"><label for="hName">品名</label><input id="hName" type="text" style="width:100%"></div>
+          <div><label for="hPrice">上代（税抜）</label><input id="hPrice" type="number" value="0" min="0" style="width:150px"></div>
+          <div><label for="hQty">数量</label><input id="hQty" type="number" value="1" min="1" style="width:100px"></div>
+          <div style="flex:1;min-width:180px"><label for="hMemo">備考</label><input id="hMemo" type="text" style="width:100%"></div>
+          <div><button class="btn" onclick="addByHand()">明細に追加する</button></div>
+        </div>
+      </div>
+
+      <div id="pane-img" class="pane">
+        <div class="hint">LINEで届いた画像や、FAXをスキャンしたファイルを読み込むと、<b>画面の左側にずっと表示されたまま</b>になります。
+          見ながら、上の「一覧からえらぶ」で商品を入れていけます。何枚でも読み込めます。</div>
+        <div id="dropZone" class="drop">
+          <b>ここに画像をドラッグしてください</b>
+          または
+          <div style="margin-top:12px">
+            <button class="btn" onclick="document.getElementById('imgFile').click()">パソコンから写真・ファイルをえらぶ</button>
+            <input id="imgFile" type="file" accept="image/*,.pdf" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
+          </div>
+          <div style="margin-top:12px;font-size:14px">写真（JPEG・PNG）とPDFが使えます。</div>
+        </div>
+        <div id="imgList" style="margin-top:14px"></div>
+
+        <div id="ocrBox" class="picker" style="margin-top:16px;display:none">
+          <h4>文字を読み取る</h4>
+          <button class="btn" id="ocrBtn" onclick="runOcr()">いま左に出ている発注書の文字を読み取る</button>
+          <div id="ocrProg" style="margin-top:12px;display:none">
+            <div style="background:#dde5ee;border-radius:8px;height:16px;overflow:hidden">
+              <div id="ocrBar" style="background:var(--accent);height:100%;width:0%;transition:width .2s"></div>
+            </div>
+            <div id="ocrStat" class="hint" style="margin:6px 0 0"></div>
+          </div>
+          <div class="hint" style="margin-top:10px">
+            読み取った文字は「発注書を貼りつける」の欄に入ります。<b>かならず目で見て直してから</b>明細に入れてください。<br>
+            ※ きれいな印刷ならよく読めますが、<b>手書きや、かすれたFAXは正しく読めません。</b>数字の読みちがいに気をつけてください。
+          </div>
+        </div>
+
+        <details style="margin-top:14px">
+          <summary style="cursor:pointer;font-weight:700;padding:8px 0">うまく読めないときは（パソコンの機能を使う方法）</summary>
+          <div class="hint" style="padding:6px 0 0">
+            <b>Mac の場合</b><br>
+            ① 画像を「プレビュー」で開く　② 文字の上をドラッグして選ぶ（選べます）　③ ⌘C でコピー<br>
+            ④ このアプリの「発注書を貼りつける」の欄に ⌘V で貼る<br><br>
+            <b>Windows 11 の場合</b><br>
+            ① 画像を「Snipping Tool（切り取り＆スケッチ）」で開く　② 「テキスト操作」を押す<br>
+            ③ 文字を選んでコピー　④ 「発注書を貼りつける」の欄に貼る
+          </div>
+        </details>
+
+        <div id="imgMsg" class="msg"></div>
+      </div>
+
+      <div id="lineWrap"></div>
+      <div class="totals" id="totalWrap"></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">3</span>書き添えることば（なくてもOK）</h2>
+    <div class="body">
+      <div class="hint">納品書の品名らんに、そのまま1行ずつ入ります。例）（〇〇様）／（9/25直送）</div>
+      <textarea id="txtNotes" style="min-height:90px" placeholder="（〇〇様）&#10;（9/25直送）"></textarea>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">4</span>日付と番号をたしかめて、印刷する</h2>
+    <div class="body">
+      <div class="row">
+        <div><label for="inDate">納品日</label><input id="inDate" type="date" onchange="renderSheet()"></div>
+        <div><label for="inNo">納品書No.</label><input id="inNo" type="text" style="width:130px" onchange="renderSheet()"></div>
+        <div><label for="inTax">消費税</label>
+          <select id="inTax" onchange="renderAll()"><option value="10">10％</option><option value="8">8％（軽減）</option><option value="0">かけない</option></select>
+        </div>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn big" onclick="doPrint()">印刷する（PDFで保存もできます）</button>
+        <button class="btn sub" onclick="saveHistory()">「出した納品書」に保存する</button>
+        <button class="btn danger" onclick="clearAll()">はじめからやり直す</button>
+      </div>
+      <div id="printMsg" class="msg"></div>
+      <div class="hint" style="margin-top:14px">※ 印刷画面で「送信先」を「PDFに保存」にすると、紙に出さずにPDFファイルが作れます。</div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">✓</span>できあがりの確認</h2>
+    <div class="body" style="background:#eef2f7">
+      <div id="previewBox" style="background:#fff;border:1px solid var(--line);padding:10px;overflow:auto"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ② 出した納品書 ============ -->
+<section id="page-history" class="page">
+  <h2 style="font-size:21px;margin-bottom:6px">出した納品書</h2>
+  <div class="hint">このパソコンの中に保存されます。もう一度印刷したいときはここから。</div>
+  <div id="histWrap"></div>
+</section>
+
+<!-- ============ ③ 設定 ============ -->
+<section id="page-master" class="page">
+  <div class="note">
+    <b>この画面は「台帳」です。</b>取引先・卸率・商品を直すところです。
+    直したらすぐ保存されます。使う前にいちど、卸率が合っているか見てください。
+  </div>
+
+  <div class="step">
+    <h2><span class="n">A</span>自分の会社の情報</h2>
+    <div class="body">
+      <div class="row">
+        <div style="flex:1;min-width:260px"><label>会社名</label><input id="mCo" type="text" style="width:100%" oninput="saveSelf()"></div>
+        <div style="flex:1;min-width:260px"><label>住所</label><input id="mAddr" type="text" style="width:100%" oninput="saveSelf()"></div>
+      </div>
+      <div class="row">
+        <div><label>TEL</label><input id="mTel" type="text" oninput="saveSelf()"></div>
+        <div><label>FAX</label><input id="mFax" type="text" oninput="saveSelf()"></div>
+        <div style="flex:1;min-width:240px"><label>インボイス登録番号</label><input id="mInv" type="text" style="width:100%" oninput="saveSelf()"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">B</span>取引先と卸率</h2>
+    <div class="body">
+      <div class="row">
+        <div style="flex:1;min-width:200px"><label>取引先名</label><input id="pName" type="text" style="width:100%"></div>
+        <div><label>卸率(％)</label><input id="pRate" type="number" value="35" style="width:110px"></div>
+        <div><label>締日</label><input id="pClose" type="text" style="width:120px" placeholder="月末"></div>
+        <div><label>入金日</label><input id="pPay" type="text" style="width:130px" placeholder="翌月末"></div>
+        <div style="flex:1;min-width:180px"><label>覚え書き</label><input id="pMemo" type="text" style="width:100%"></div>
+        <div><button class="btn" onclick="addPartner()">取引先を足す</button></div>
+      </div>
+      <div id="pTable"></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">C</span>お届け先ごとの卸率</h2>
+    <div class="body">
+      <div class="hint">卸したあとの「その先のお届け先」で卸率が変わる取引先は、ここで設定します。</div>
+      <div class="row">
+        <div style="flex:1;min-width:260px"><label>どの取引先の分か</label><select id="sPartner" style="width:100%" onchange="renderSubs()"></select></div>
+        <div style="flex:1;min-width:200px"><label>お届け先名</label><input id="sName" type="text" style="width:100%"></div>
+        <div><label>卸率(％)　空欄＝基本</label><input id="sRate" type="number" style="width:150px" placeholder="基本"></div>
+        <div><button class="btn" onclick="addSub()">お届け先を足す</button></div>
+      </div>
+      <div id="sTable"></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">D</span>商品</h2>
+    <div class="body">
+      <div class="hint">品名は「シリーズ」と「大きさ・内容量」に分けて入れます。印刷には「シリーズ　大きさ」の形で出ます。<br>
+        同じシリーズ名でいくつも足すと、①でシリーズを押す→②で大きさを押す、の2手でえらべるようになります。</div>
+      <div class="row">
+        <div style="flex:1;min-width:220px"><label>シリーズ（商品名）</label><input id="gGroup" type="text" style="width:100%" placeholder="例）〇〇クリーム" list="groupList"><datalist id="groupList"></datalist></div>
+        <div style="flex:0 0 180px"><label>大きさ・内容量</label><input id="gSpec" type="text" style="width:100%" placeholder="例）45g（無ければ空）"></div>
+        <div><label>上代（税抜）</label><input id="gPrice" type="number" value="0" style="width:160px"></div>
+        <div><button class="btn" onclick="addProduct()">商品を足す</button></div>
+      </div>
+      <div id="gTable"></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">E</span>データの持ち出し・引っ越し</h2>
+    <div class="body">
+      <div class="hint">別のパソコンで使うときや、バックアップを取るときに使います。</div>
+      <button class="btn sub" onclick="exportData()">ファイルに書き出す</button>
+      <button class="btn sub" onclick="document.getElementById('impFile').click()">ファイルから読み込む</button>
+      <input id="impFile" type="file" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="btn danger" onclick="resetData()">最初の状態に戻す</button>
+      <div id="dataMsg" class="msg"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ ④ 使い方 ============ -->
+<section id="page-help" class="page">
+  <div class="note" style="font-size:17px">
+    <b>このファイル1つで動きます。</b>インストールも、会員登録も要りません。<br>
+    デスクトップに置いて、ダブルクリックで開いてください。
+  </div>
+
+  <div class="step">
+    <h2><span class="n">!</span>はじめに、これだけ確かめてください</h2>
+    <div class="body">
+      <p style="margin-top:0"><b>画面のいちばん上に、赤い帯が出ていませんか？</b></p>
+      <ul style="margin:0 0 14px;padding-left:1.4em">
+        <li><b>出ていない</b> … そのまま使えます。入力した内容は自動で保存されます。</li>
+        <li><b>出ている</b> … このパソコンでは自動保存ができません。
+          作業のあとに「③設定 → E → ファイルに書き出す」で保存し、次に開いたら「ファイルから読み込む」をしてください。
+          <b>これをしないと、足した取引先や商品が消えます。</b></li>
+      </ul>
+      <p><b>置き場所は「デスクトップ」がおすすめです。</b>
+        ダウンロードのフォルダに置いたままにすると、あとで整理したときに消してしまいがちです。</p>
+      <p style="margin-bottom:0"><b>バックアップは月に一度。</b>
+        「③設定 → E → ファイルに書き出す」で、台帳をファイルに残せます。パソコンを買い替えるときも、このファイルで引っ越せます。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">1</span>納品書をつくる</h2>
+    <div class="body">
+      <ol style="margin:0;padding-left:1.4em">
+        <li><b>取引先をえらぶ</b>。その先のお届け先で卸率が変わる取引先では、選ぶ欄がもう1つ出ます。</li>
+        <li>青い箱に出る<b>卸率</b>を確かめる。</li>
+        <li>卸率がいつもと違うときは「<b>この納品書だけ、卸率をいつもと変える</b>」にチェックを入れて数字を打つ。
+          台帳の数字は書きかわりません。その納品書かぎりです。</li>
+        <li><b>商品を入れる</b>。入れ方は4つあります（下の表）。</li>
+        <li>明細の表で、数量・上代・卸率・備考は<b>あとから直せます</b>。いらない行は「削除」。
+          <span style="color:var(--warn);font-weight:700">赤い行</span>は台帳にない商品です。上代を打ち込んでください。</li>
+        <li>（〇〇様）（9/25直送）のような一行メモは「<b>書き添えることば</b>」へ。</li>
+        <li>日付と納品書No.を確かめて、<b>印刷する</b>。</li>
+      </ol>
+      <table class="grid" style="margin-top:16px">
+        <thead><tr><th style="width:230px">入れ方</th><th>どんなとき</th></tr></thead>
+        <tbody>
+          <tr><td><b>一覧からえらぶ</b></td><td>ふだんはこれ。商品名を押す→大きさを押す、の<b>2手</b>で明細に入ります。<br>上の「商品をさがす」に打つと、下がしぼられます。</td></tr>
+          <tr><td><b>発注書の画像を見ながら入れる</b></td><td>LINEの画像やFAXのスキャンを読み込むと、<b>画面の左にずっと表示されたまま</b>になります。見ながら入力できます。</td></tr>
+          <tr><td><b>発注書を貼りつける</b></td><td>文字でもらった発注書を、1行に1商品ずつ貼りつけます。</td></tr>
+          <tr><td><b>手で入力する</b></td><td>台帳にない商品を、その場で打ち込みます。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">2</span>印刷する・PDFで残す</h2>
+    <div class="body">
+      <p style="margin-top:0"><b>紙に出すとき</b> … 「印刷する」を押して、プリンターをえらぶ。</p>
+      <p><b>PDFで残すとき</b> … 「印刷する」を押したあと、印刷画面の「<b>送信先</b>」または「<b>PDF</b>」から
+        <b>「PDFに保存」</b>をえらぶ。</p>
+      <p style="margin-bottom:0">「<b>出した納品書に保存する</b>」を押しておくと、②のタブからいつでも同じものを再印刷できます。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">3</span>発注書の文字を読み取る</h2>
+    <div class="body">
+      <p style="margin-top:0">「発注書の画像を見ながら入れる」で画像を読み込むと、「<b>文字を読み取る</b>」ボタンが出ます。
+        <b>はじめの1回だけ、インターネットにつながっている必要があります</b>（読み取りの部品を取り込むため）。費用はかかりません。</p>
+      <p><b>読み取った文字は、いきなり明細には入りません。</b>「発注書を貼りつける」の欄に入るだけです。
+        左の画像と見くらべて、ちがうところを直してから明細に入れてください。</p>
+      <p style="margin-bottom:0;color:var(--warn);font-weight:700">⚠ きれいな印刷はよく読めますが、手書きやかすれたFAXは正しく読めません。
+        とくに数量の数字は、かならず目で確かめてください。</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="n">4</span>困ったとき</h2>
+    <div class="body">
+      <table class="grid">
+        <thead><tr><th style="width:290px">こまりごと</th><th>どうするか</th></tr></thead>
+        <tbody>
+          <tr><td>取引先が一覧に無い</td><td>「③設定 → B」で足します。</td></tr>
+          <tr><td>お届け先が一覧に無い</td><td>「― 基本の卸率を使う ―」のまま進めるか、「③設定 → C」で足します。</td></tr>
+          <tr><td>商品が一覧に無い</td><td>その場でよければ「手で入力する」。これからも使うなら「③設定 → D」で足します。</td></tr>
+          <tr><td>卸率がいつもと違う</td><td>納品書ぜんぶなら手順1の③。その商品だけなら明細表の「卸率」らん。</td></tr>
+          <tr><td>画像が表示されない</td><td>iPhoneの HEIC 形式かもしれません。写真アプリでJPEGに保存しなおすか、LINEで送ってもらうとJPEGになります。</td></tr>
+          <tr><td>文字がうまく読み取れない</td><td>「発注書の画像を見ながら入れる」の下にある<b>「うまく読めないときは」</b>を開いてください。パソコンに元から入っている文字認識の使い方が書いてあります。</td></tr>
+          <tr><td>まちがえて消してしまった</td><td>「はじめからやり直す」を押す前なら、明細は画面に残っています。台帳を戻すには、書き出しておいたファイルから読み込みます。</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<div id="imgPanel">
+  <div id="imgBar">
+    <button onclick="imgStep(-1)">◀ 前</button>
+    <button onclick="imgStep(1)">次 ▶</button>
+    <button onclick="imgZoom(-1)">－ 小さく</button>
+    <button onclick="imgZoom(1)">＋ 大きく</button>
+    <button onclick="imgZoom(0)">はば に合わせる</button>
+    <button onclick="imgRotate()">↻ 回す</button>
+    <button onclick="imgClose()">✕ 閉じる</button>
+    <span class="name" id="imgName"></span>
+  </div>
+  <div id="imgStage"></div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+/* ======================================================================
+   納品書作成システム  ―  データと処理
+   保存先: このブラウザの localStorage（キー nouhinsho_v1）
+   ====================================================================== */
+
+var KEY = 'nouhinsho_v1';
+
+/* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
+var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
+var PARTNERS0 = [];
+var PRODUCTS0 = [];
+/* 品名＝シリーズ＋規格。印刷にはこの形で出ます。 */
+function pname(g){ return g.spec ? g.group+'　'+g.spec : g.group; }
+
+/* ====================== 発注書の画像 ====================== */
+var imgs=[], imgIdx=0, rot=0, zoom=0;   /* zoom 0=はばに合わせる */
+
+function addImgs(files){
+  var add=0, bad=[];
+  Array.prototype.forEach.call(files, function(f){
+    var n=f.name||'', ext=(n.split('.').pop()||'').toLowerCase();
+    var isPdf = f.type==='application/pdf' || ext==='pdf';
+    var isHeic = ext==='heic' || ext==='heif';
+    var isImg  = (f.type||'').indexOf('image/')===0 || /^(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/.test(ext);
+    if(!isPdf && !isImg){ bad.push(n); return; }
+    imgs.push({name:n, url:URL.createObjectURL(f), pdf:isPdf, heic:isHeic});
+    add++;
+  });
+  if(add){ imgIdx=imgs.length-add; rot=0; zoom=0; showImg(); }
+  if(bad.length) flash('imgMsg','この形式は開けませんでした：'+bad.join('、'),false);
+  else if(add)   flash('imgMsg', add+'件を読み込みました。左側に表示しています。', true);
+  renderImgList();
+}
+function showImg(){
+  var st=document.getElementById('imgStage');
+  if(!imgs.length){ document.body.classList.remove('withimg'); st.innerHTML=''; return; }
+  document.body.classList.add('withimg');
+  if(imgIdx<0) imgIdx=0;
+  if(imgIdx>imgs.length-1) imgIdx=imgs.length-1;
+  var f=imgs[imgIdx];
+  document.getElementById('imgName').textContent=(imgIdx+1)+' / '+imgs.length+'　'+f.name;
+  if(f.pdf){ st.innerHTML='<iframe src="'+f.url+'"></iframe>'; return; }
+  var w = zoom===0 ? 'width:100%;max-width:100%' : 'width:'+(100*Math.pow(1.25,zoom))+'%';
+  st.innerHTML='<img id="theImg" src="'+f.url+'" style="'+w+';transform:rotate('+(rot*90)+'deg)" '+
+    'onerror="imgFail()">';
+}
+function imgFail(){
+  var f=imgs[imgIdx]||{};
+  document.getElementById('imgStage').innerHTML='<div class="bad">この画像は、お使いのブラウザでは表示できませんでした。'+
+    (f.heic?'<br>iPhoneの HEIC 形式のようです。':'')+
+    '<br><br>写真アプリで開いて「JPEG」で保存しなおすか、<br>LINEで送ってもらうと JPEG になります。</div>';
+}
+function imgStep(d){ if(!imgs.length) return; imgIdx=(imgIdx+d+imgs.length)%imgs.length; rot=0; zoom=0; showImg(); }
+function imgZoom(d){ zoom = (d===0)?0:Math.max(-3,Math.min(8,zoom+d)); showImg(); }
+function imgRotate(){ rot=(rot+1)%4; showImg(); }
+function imgClose(){ document.body.classList.remove('withimg'); }
+function imgOpen(i){ imgIdx=i; rot=0; zoom=0; showImg(); }
+function imgDel(i){
+  URL.revokeObjectURL(imgs[i].url); imgs.splice(i,1);
+  if(imgIdx>=imgs.length) imgIdx=imgs.length-1;
+  showImg(); renderImgList();
+}
+function imgClear(){
+  if(!imgs.length) return;
+  if(!confirm('読み込んだ画像をすべて外しますか？　明細はそのまま残ります。')) return;
+  imgs.forEach(function(f){ URL.revokeObjectURL(f.url); });
+  imgs=[]; imgIdx=0; showImg(); renderImgList();
+}
+function renderImgList(){
+  var w=document.getElementById('imgList');
+  document.getElementById('ocrBox').style.display = imgs.length?'block':'none';
+  if(!imgs.length){ w.innerHTML=''; return; }
+  w.innerHTML='<table class="grid"><thead><tr><th>読み込んだ発注書</th><th style="width:230px"></th></tr></thead><tbody>'+
+    imgs.map(function(f,i){
+      return '<tr'+(i===imgIdx?' style="background:#eaf2fb"':'')+'><td>'+esc(f.name)+'</td>'+
+        '<td><button class="btn sm" onclick="imgOpen('+i+')">左に出す</button> '+
+        '<button class="btn danger sm" onclick="imgDel('+i+')">外す</button></td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div style="margin-top:10px"><button class="btn sub" onclick="imgClear()">ぜんぶ外す</button></div>';
+}
+/* ドラッグ＆ドロップ */
+function initDrop(){
+  var z=document.getElementById('dropZone');
+  ['dragenter','dragover'].forEach(function(e){
+    z.addEventListener(e,function(ev){ ev.preventDefault(); z.classList.add('over'); });
+  });
+  ['dragleave','drop'].forEach(function(e){
+    z.addEventListener(e,function(ev){ ev.preventDefault(); z.classList.remove('over'); });
+  });
+  z.addEventListener('drop',function(ev){ if(ev.dataTransfer&&ev.dataTransfer.files) addImgs(ev.dataTransfer.files); });
+}
+
+/* ====================== 文字の読み取り（ブラウザの中だけで動きます） ====================== */
+var TESS='https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js';
+var tessReady=null;
+function loadTess(){
+  if(tessReady) return tessReady;
+  tessReady=new Promise(function(ok,ng){
+    if(window.Tesseract) return ok();
+    var el=document.createElement('script');
+    el.src=TESS; el.onload=function(){ ok(); };
+    el.onerror=function(){ tessReady=null; ng(new Error('読み取りの部品を取り込めませんでした')); };
+    document.head.appendChild(el);
+  });
+  return tessReady;
+}
+function ocrStat(pct,msg){
+  document.getElementById('ocrProg').style.display='block';
+  document.getElementById('ocrBar').style.width=Math.round(pct*100)+'%';
+  document.getElementById('ocrStat').textContent=msg;
+}
+function runOcr(){
+  if(!imgs.length){ flash('imgMsg','さきに発注書の画像を読み込んでください。',false); return; }
+  var f=imgs[imgIdx];
+  if(f.pdf){ flash('imgMsg','PDFはそのままでは読み取れません。画像（JPEG）で保存しなおすか、下の「パソコンの機能を使う方法」をお試しください。',false); return; }
+  var btn=document.getElementById('ocrBtn');
+  btn.disabled=true; btn.textContent='読み取っています…';
+  ocrStat(0.02,'読み取りの準備をしています（はじめの1回だけ少し時間がかかります）');
+  loadTess().then(function(){
+    ocrStat(0.1,'読み取り中…');
+    return Tesseract.recognize(f.url,'jpn',{logger:function(m){
+      if(m.status==='recognizing text') ocrStat(0.1+m.progress*0.9,'読み取り中… '+Math.round(m.progress*100)+'％');
+      else ocrStat(0.05,'準備中… '+(m.status||''));
+    }});
+  }).then(function(res){
+    var txt=String(res.data.text||'').split(/\r?\n/)
+      .map(function(l){ return l.replace(/[ \u3000]{2,}/g,' ').trim(); })
+      .filter(function(l){ return l; }).join('\n');
+    document.getElementById('txtPaste').value=txt;
+    ocrStat(1,'読み取りが終わりました。');
+    mode('paste');
+    flash('pasteMsg','読み取った文字を入れました。左の発注書と見くらべて、ちがうところを直してから「読み取って明細に入れる」を押してください。',true);
+    document.getElementById('txtPaste').scrollIntoView({block:'center',behavior:'smooth'});
+  }).catch(function(e){
+    document.getElementById('ocrProg').style.display='none';
+    flash('imgMsg','読み取れませんでした（'+e.message+'）。ネットにつながっているか確かめるか、下の「パソコンの機能を使う方法」をお試しください。',false);
+  }).then(function(){
+    btn.disabled=false; btn.textContent='いま左に出ている発注書の文字を読み取る';
+  });
+}
+
+/* ====================== 保存・読み出し ====================== */
+var S = null;                                  /* 台帳 */
+var cur = {partnerId:'', subId:'', lines:[]};  /* 作成中の納品書 */
+
+function freshState(){
+  return {self:JSON.parse(JSON.stringify(SELF0)),
+          partners:JSON.parse(JSON.stringify(PARTNERS0)),
+          products:JSON.parse(JSON.stringify(PRODUCTS0)),
+          history:[], seq:{}};
+}
+var firstRun = false;
+function load(){
+  try{
+    var raw = localStorage.getItem(KEY);
+    firstRun = !raw;
+    S = raw ? JSON.parse(raw) : freshState();
+  }catch(e){ S = freshState(); firstRun = true; }
+  if(!S.self||!S.partners||!S.products){ S = freshState(); }
+  if(!S.history) S.history = [];
+  if(!S.seq) S.seq = {};
+  /* 旧形式（品名ひとつ）を シリーズ＋大きさ に分けて引き継ぐ */
+  S.products.forEach(function(g){
+    if(g.group===undefined){
+      var n=String(g.name||'').trim();
+      var i=n.search(/[　\s]/);
+      g.group = (i>0)? n.slice(0,i) : n;
+      g.spec  = (i>0)? n.slice(i).trim() : '';
+      delete g.name;
+    }
+    if(g.spec===undefined) g.spec='';
+  });
+}
+var canStore = true;
+function save(){
+  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  catch(e){ canStore=false; showStoreWarn(); }
+}
+/* このパソコン・このブラウザで自動保存ができるか、起動時に確かめる */
+function checkStore(){
+  try{ localStorage.setItem(KEY+'_probe','1'); localStorage.removeItem(KEY+'_probe'); canStore=true; }
+  catch(e){ canStore=false; }
+  showStoreWarn();
+}
+function showStoreWarn(){
+  var b=document.getElementById('storeWarn');
+  if(!b) return;
+  b.style.display = canStore ? 'none' : 'block';
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+function yen(n){ return Number(n||0).toLocaleString('ja-JP'); }
+function flash(id,text,ok){ var e=document.getElementById(id); e.textContent=text; e.className='msg '+(ok?'ok':'ng'); setTimeout(function(){e.className='msg';},4000); }
+
+/* ====================== 画面きりかえ ====================== */
+function showPage(p){
+  ['create','history','master','help'].forEach(function(x){
+    document.getElementById('page-'+x).classList.toggle('on', x===p);
+    document.getElementById('tab'+x.charAt(0).toUpperCase()+x.slice(1)).classList.toggle('on', x===p);
+  });
+  if(p==='history') renderHistory();
+  if(p==='master') renderMaster();
+}
+function mode(m){
+  ['list','paste','hand','img'].forEach(function(x){
+    document.getElementById('pane-'+x).classList.toggle('on', x===m);
+  });
+  document.getElementById('mdList').classList.toggle('on', m==='list');
+  document.getElementById('mdPaste').classList.toggle('on', m==='paste');
+  document.getElementById('mdHand').classList.toggle('on', m==='hand');
+  document.getElementById('mdImg').classList.toggle('on', m==='img');
+}
+
+/* ====================== 取引先・卸率 ====================== */
+function getPartner(){ return S.partners.filter(function(p){return p.id===cur.partnerId;})[0]||null; }
+function getSub(){
+  var p=getPartner(); if(!p||!p.subs) return null;
+  return p.subs.filter(function(s){return s.id===cur.subId;})[0]||null;
+}
+/* 台帳どおりの卸率（取引先 → お届け先の順で決まる） */
+function tableRate(){
+  var p=getPartner(); if(!p) return 0;
+  var s=getSub();
+  if(s && s.rate!=null && s.rate!=='') return Number(s.rate);
+  return Number(p.baseRate!=null?p.baseRate:p.rate);
+}
+/* この納品書に実際に使う卸率（いつもと変えているならそちら） */
+function currentRate(){
+  if(document.getElementById('chkRate').checked){
+    var v=document.getElementById('inRateOv').value;
+    if(v!=='') return Number(v);
+  }
+  return tableRate();
+}
+function isOv(){ return document.getElementById('chkRate').checked && document.getElementById('inRateOv').value!==''; }
+function onRateOv(){
+  var on=document.getElementById('chkRate').checked;
+  document.getElementById('rateOvBox').style.display = on?'block':'none';
+  if(on && document.getElementById('inRateOv').value===''){ document.getElementById('inRateOv').value=tableRate(); }
+  if(!on){ document.getElementById('inRateWhy').value=''; }
+  renderAll();
+}
+
+function fillPartnerSelect(){
+  var sel=document.getElementById('selPartner');
+  sel.innerHTML='<option value="">― えらんでください ―</option>'+
+    S.partners.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('');
+  sel.value = cur.partnerId||'';
+}
+function onPartner(){
+  cur.partnerId = document.getElementById('selPartner').value;
+  cur.subId = '';
+  /* 取引先を変えたら、一時的な卸率の変更は持ち越さない */
+  document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
+  document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
+  var p = getPartner();
+  var w = document.getElementById('subWrap');
+  if(p && p.subs && p.subs.length){
+    w.style.display='block';
+    document.getElementById('selSub').innerHTML =
+      '<option value="">― 基本の卸率を使う（'+p.baseRate+'％）―</option>'+
+      p.subs.map(function(s){
+        return '<option value="'+s.id+'">'+esc(s.name)+'　（'+(s.rate==null||s.rate===''?'基本':s.rate+'％')+'）</option>';
+      }).join('');
+  }else{ w.style.display='none'; }
+  renderAll();
+}
+function onSub(){ cur.subId = document.getElementById('selSub').value; renderAll(); }
+
+function renderRateInfo(){
+  var p=getPartner(), box=document.getElementById('rateInfo');
+  document.getElementById('ovWrap').style.display = p?'block':'none';
+  if(!p){ box.style.display='none'; return; }
+  box.style.display='block';
+  var el=document.getElementById('rateNow');
+  el.textContent = currentRate();
+  el.style.color = isOv()? '#e65100' : '';
+  var tag=document.getElementById('rateTag');
+  if(tag) tag.innerHTML = isOv()
+    ? '<span style="color:#e65100;font-weight:700">（いつもは '+tableRate()+'％。この納品書だけ変えています）</span>' : '';
+  document.getElementById('infoClose').textContent = p.close||'―';
+  document.getElementById('infoPay').textContent   = p.pay||'―';
+  document.getElementById('infoInv').textContent   = p.inv||'―';
+  document.getElementById('infoMemo').textContent  = p.memo||'―';
+}
+
+/* ====================== 商品・明細 ====================== */
+var pick = {group:''};
+
+/* さがす文字で商品をしぼる */
+function matchFind(g,k){
+  if(!k) return true;
+  return norm(pname(g)).indexOf(k)>=0;
+}
+function renderPicker(){
+  var k=norm(document.getElementById('inFind').value);
+  var hit=S.products.filter(function(g){return matchFind(g,k);});
+
+  /* さがす文字でしぼった結果、1つのシリーズしか残らなければ自動でそれを開く */
+  var groups=[]; hit.forEach(function(g){ if(groups.indexOf(g.group)<0) groups.push(g.group); });
+  if(groups.length===1) pick.group=groups[0];
+  if(groups.indexOf(pick.group)<0) pick.group='';
+
+  var gw=document.getElementById('chipGroups');
+  gw.innerHTML = groups.length
+    ? groups.map(function(n){
+        var c=S.products.filter(function(g){return g.group===n && matchFind(g,k);}).length;
+        return '<button class="chip'+(pick.group===n?' on':'')+'" onclick="pickGroup(\''+esc(n).replace(/'/g,"&#39;")+'\')">'+esc(n)+
+               (c>1?'<span class="p">'+c+'種類</span>':'')+'</button>';
+      }).join('')
+    : (S.products.length
+        ? '<button class="chip none">見つかりませんでした</button>'
+        : '<button class="chip none">商品が台帳に入っていません（「③設定 → D」で足せます）</button>');
+
+  var sw=document.getElementById('chipSpecs'), st=document.getElementById('specTitle');
+  if(!pick.group){
+    st.textContent='② 大きさ・内容量をえらぶと、明細に入ります';
+    sw.innerHTML='<button class="chip none">まず上の商品をえらんでください</button>';
+    return;
+  }
+  var list=S.products.filter(function(g){return g.group===pick.group && matchFind(g,k);});
+  st.textContent='② 「'+pick.group+'」のどれかを押すと、そのまま明細に入ります';
+  sw.innerHTML=list.map(function(g){
+    return '<button class="chip spec" onclick="addPick(\''+g.id+'\')">'+esc(g.spec||'（規格なし）')+
+           '<span class="p">'+yen(g.price)+'円</span></button>';
+  }).join('');
+}
+function pickGroup(n){
+  pick.group = (pick.group===n)?'':n;
+  renderPicker();
+  /* 規格が1つしかない商品は、シリーズを押しただけで明細に入れる */
+  var list=S.products.filter(function(g){return g.group===n;});
+  if(pick.group===n && list.length===1){ addPick(list[0].id); }
+}
+function addPick(id){
+  var g=S.products.filter(function(x){return x.id===id;})[0];
+  if(!g) return;
+  var q=Math.max(1, parseInt(document.getElementById('inQty').value,10)||1);
+  cur.lines.push({name:pname(g), price:Number(g.price), qty:q,
+                  memo:document.getElementById('inMemo').value.trim(), rate:null, miss:false});
+  document.getElementById('inQty').value=1; document.getElementById('inMemo').value='';
+  renderAll();
+  var w=document.getElementById('lineWrap');
+  if(w.firstChild) w.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+function fillProductSelect(){ renderPicker(); }
+function addByHand(){
+  var n=document.getElementById('hName').value.trim();
+  if(!n){ alert('品名を入れてください。'); return; }
+  cur.lines.push({name:n, price:Number(document.getElementById('hPrice').value)||0,
+                  qty:Math.max(1,parseInt(document.getElementById('hQty').value,10)||1),
+                  memo:document.getElementById('hMemo').value.trim(), rate:null, miss:false});
+  document.getElementById('hName').value=''; document.getElementById('hPrice').value=0;
+  document.getElementById('hQty').value=1; document.getElementById('hMemo').value='';
+  renderAll();
+}
+
+/* 発注書の貼りつけを読み取る */
+function norm(s){
+  return String(s).replace(/[Ａ-Ｚａ-ｚ０-９]/g,function(c){return String.fromCharCode(c.charCodeAt(0)-0xFEE0);})
+                  .replace(/[\s　・,，、.。／\/\-ー－_]/g,'').toLowerCase();
+}
+function findProduct(name){
+  var k=norm(name), hit=null;
+  S.products.forEach(function(g){ if(norm(pname(g))===k) hit=g; });
+  if(hit) return hit;
+  S.products.forEach(function(g){ if(!hit && k.length>1 && (norm(pname(g)).indexOf(k)>=0 || k.indexOf(norm(pname(g)))>=0)) hit=g; });
+  return hit;
+}
+function readPaste(){
+  var raw=document.getElementById('txtPaste').value.split(/\r?\n/);
+  var added=0, missed=0;
+  raw.forEach(function(line){
+    line=line.trim(); if(!line) return;
+    if(/^(品名|商品名|No|no|番号)/.test(line) && /数量|個数|qty/i.test(line)) return;  /* 見出し行は飛ばす */
+    var bare=line.replace(/[\s\u3000]/g,'');
+    if(/^(発注書|ご発注書|御発注書|注文書|ご注文書|御注文書|納品書|請求書|見積書|以上|合計|小計)$/.test(bare)) return;
+    var name='', qty=1, memo='';
+    if(line.indexOf(',')>=0 || line.indexOf('\t')>=0){
+      var c=line.split(/[,\t]/);
+      name=(c[0]||'').trim(); qty=parseInt(String(c[1]||'1').replace(/[^0-9]/g,''),10)||1; memo=(c[2]||'').trim();
+    }else{
+      var m=line.match(/^(.*?)[\s　]*[x×*]?[\s　]*([0-9０-９]+)[\s　]*(?:個|点|本|枚|ケ|ヶ)?$/);
+      if(m && m[1].trim()){ name=m[1].trim(); qty=parseInt(norm(m[2]),10)||1; }
+      else { name=line; qty=1; }
+    }
+    var g=findProduct(name);
+    if(g){ cur.lines.push({name:pname(g), price:Number(g.price), qty:qty, memo:memo, rate:null, miss:false}); added++; }
+    else  { cur.lines.push({name:name,     price:0,                qty:qty, memo:memo, rate:null, miss:true });  added++; missed++; }
+  });
+  if(!added){ flash('pasteMsg','読み取れる行がありませんでした。1行に1商品ずつ貼りつけてください。',false); return; }
+  if(missed) flash('pasteMsg', added+'行を入れました。うち'+missed+'行は商品台帳に無いため、赤色にして上代0円にしています。上代を直すか、設定画面で商品を足してください。', false);
+  else       flash('pasteMsg', added+'行を明細に入れました。', true);
+  renderAll();
+}
+
+function delLine(i){ cur.lines.splice(i,1); renderAll(); }
+function setQty(i,v){ cur.lines[i].qty=Math.max(1,parseInt(v,10)||1); renderAll(); }
+function setPrice(i,v){ cur.lines[i].price=Math.max(0,Number(v)||0); cur.lines[i].miss=false; renderAll(); }
+function setMemo(i,v){ cur.lines[i].memo=v; renderSheet(); }
+
+function calc(){
+  var head=currentRate(), t=Number(document.getElementById('inTax').value);
+  var sr=0, sa=0, mixed=false;
+  var rows=cur.lines.map(function(l){
+    var own=(l.rate==null||l.rate==='')?null:Number(l.rate);
+    var r=(own==null)?head:own;
+    if(own!=null && own!==head) mixed=true;
+    var retail=Math.round(l.price*l.qty);
+    var amount=Math.floor(l.price*l.qty*r/100);
+    sr+=retail; sa+=amount;
+    return {name:l.name, qty:l.qty, price:l.price, rate:r, ownRate:own,
+            retail:retail, amount:amount, memo:l.memo, miss:l.miss};
+  });
+  var tax=Math.floor(sa*t/100);
+  return {rate:head, mixed:mixed, taxRate:t, rows:rows, subRetail:sr, subAmount:sa, tax:tax, total:sa+tax};
+}
+function setRate(i,v){ cur.lines[i].rate=(v===''?null:Math.max(0,Number(v)||0)); renderAll(); }
+
+/* ====================== 画面の描き直し ====================== */
+function renderAll(){ renderSetup(); renderRateInfo(); renderLines(); renderSheet(); }
+function renderSetup(){
+  var empty = !S.partners.length && !S.products.length;
+  document.getElementById('setupBox').style.display = empty?'block':'none';
+}
+
+function renderLines(){
+  var w=document.getElementById('lineWrap'), t=document.getElementById('totalWrap');
+  if(!cur.lines.length){
+    w.innerHTML='<div class="empty">まだ商品が入っていません。上のどれかの方法で入れてください。</div>';
+    t.innerHTML=''; return;
+  }
+  var c=calc(), h='<table class="grid"><thead><tr>'+
+    '<th style="width:40px">No</th><th>品名</th><th class="num" style="width:100px">数量</th>'+
+    '<th class="num" style="width:140px">上代（税抜）</th><th class="num" style="width:105px">卸率(％)</th>'+
+    '<th class="num" style="width:130px">金額</th>'+
+    '<th style="width:180px">備考</th><th style="width:70px"></th></tr></thead><tbody>';
+  c.rows.forEach(function(r,i){
+    h+='<tr class="'+(r.miss?'miss':'')+'"><td>'+(i+1)+'</td>'+
+       '<td>'+esc(r.name)+(r.miss?'<br><span style="color:#c62828;font-size:13px">※台帳に無い商品です。上代を入れてください</span>':'')+'</td>'+
+       '<td class="num"><input type="number" min="1" value="'+r.qty+'" style="width:80px;text-align:right" onchange="setQty('+i+',this.value)"></td>'+
+       '<td class="num"><input type="number" min="0" value="'+r.price+'" style="width:125px;text-align:right" onchange="setPrice('+i+',this.value)"></td>'+
+       '<td class="num'+(r.ownRate!=null?' ov':'')+'"><input type="number" min="0" max="100" value="'+(r.ownRate==null?'':r.ownRate)+'" placeholder="'+c.rate+'" style="width:85px;text-align:right" onchange="setRate('+i+',this.value)"></td>'+
+       '<td class="num">'+yen(r.amount)+'</td>'+
+       '<td><input type="text" value="'+esc(r.memo)+'" style="width:100%" onchange="setMemo('+i+',this.value)"></td>'+
+       '<td><button class="btn danger sm" onclick="delLine('+i+')">削除</button></td></tr>';
+  });
+  h+='</tbody></table>'+
+     '<div class="hint">「卸率」らんは、ふだんは空のままでかまいません（この納品書の '+c.rate+'％ を使います）。'+
+     'その商品だけ卸率がちがうときに、数字を入れてください。</div>';
+  w.innerHTML=h;
+  t.innerHTML='<table><tr><td>小計（上代）</td><td style="text-align:right">'+yen(c.subRetail)+' 円</td></tr>'+
+    '<tr><td>小計（卸 '+(c.mixed?'商品ごと':c.rate+'％')+'・税抜）</td><td style="text-align:right">'+yen(c.subAmount)+' 円</td></tr>'+
+    '<tr><td>消費税（'+c.taxRate+'％）</td><td style="text-align:right">'+yen(c.tax)+' 円</td></tr>'+
+    '<tr class="sum"><td>合計</td><td style="text-align:right">'+yen(c.total)+' 円</td></tr></table>';
+}
+
+function wareki(iso){
+  var d=new Date(iso+'T00:00:00');
+  if(isNaN(d)) d=new Date();
+  var y=d.getFullYear()-2018;
+  return {g:(y>=1?'令和':''), y:(y>=1?y:d.getFullYear()), m:d.getMonth()+1, d:d.getDate()};
+}
+function sheetHTML(){
+  var p=getPartner(), c=calc(), s=S.self;
+  var w=wareki(document.getElementById('inDate').value);
+  var notes=document.getElementById('txtNotes').value.split(/\r?\n/).filter(function(x){return x.trim();});
+  var body='', n=0;
+  c.rows.forEach(function(r){ n++;
+    body+='<tr><td class="c-no">'+n+'</td><td>'+esc(r.name)+'</td><td class="c-qty">'+r.qty+
+          '</td><td class="c-list">'+yen(r.price)+'</td><td class="c-amt">'+yen(r.amount)+
+          '</td><td class="c-memo">'+esc(r.memo).replace(/\s+/g,'<br>')+'</td></tr>';
+  });
+  notes.forEach(function(x){
+    body+='<tr><td class="c-no"></td><td>'+esc(x)+'</td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
+  });
+  var filler=Math.max(0, 18-(c.rows.length+notes.length));
+  for(var i=0;i<filler;i++) body+='<tr><td class="c-no"></td><td></td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
+
+  return '<div class="sheet">'+
+    '<div class="no">No.　'+esc(document.getElementById('inNo').value)+'</div>'+
+    '<div class="ttl">納品書</div>'+
+    '<div class="date">'+w.g+'　'+w.y+'　年　'+w.m+'　月　'+w.d+'　日</div>'+
+    '<div class="topgrid">'+
+      '<div class="to">'+
+        '<div class="name">'+esc(p?p.name:'')+'<span>様</span></div>'+
+        '<div class="sm">'+(p&&p.inv?'インボイス登録番号　'+esc(p.inv):'&nbsp;')+'</div>'+
+        '<div class="sm">下記のとおり納品いたします。</div>'+
+      '</div>'+
+      '<div class="from">'+
+        '<div>'+esc(s.addr)+'</div>'+
+        '<div class="co">'+esc(s.co)+'</div>'+
+        '<div>TEL　'+esc(s.tel)+'　　FAX　'+esc(s.fax)+'</div>'+
+        '<div>インボイス登録番号　'+esc(s.inv)+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<table class="nou"><thead><tr>'+
+      '<th class="c-no">No</th><th>品　名</th><th class="c-qty">数量</th>'+
+      '<th class="c-list">上代</th><th class="c-amt">金額</th><th class="c-memo">備考</th></tr></thead>'+
+      '<tbody>'+body+
+      '<tr><td class="c-no"></td><td class="lbl">小計</td><td class="c-qty"></td>'+
+        '<td class="c-list">'+yen(c.subRetail)+'</td><td class="c-amt">'+yen(c.subAmount)+'</td><td class="c-memo">税抜</td></tr>'+
+      '<tr><td class="c-no"></td><td class="lbl" colspan="3">消費税</td>'+
+        '<td class="c-amt">'+yen(c.tax)+'</td><td class="c-memo">'+c.taxRate+'%</td></tr>'+
+      '<tr><td class="lbl" colspan="4">合　計</td><td class="c-amt">'+yen(c.total)+'</td><td class="c-memo"></td></tr>'+
+    '</tbody></table></div>';
+}
+function renderSheet(){
+  var h = getPartner()? sheetHTML() : '<div class="empty">取引先をえらぶと、ここに納品書が出ます。</div>';
+  document.getElementById('printArea').innerHTML = getPartner()? h : '';
+  document.getElementById('previewBox').innerHTML = h;
+}
+
+/* ====================== 印刷・保存・やり直し ====================== */
+function doPrint(){
+  if(!getPartner()){ flash('printMsg','さきに取引先をえらんでください。',false); return; }
+  if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
+  renderSheet(); window.print();
+}
+function saveHistory(){
+  if(!getPartner()||!cur.lines.length){ flash('printMsg','取引先と商品が入っていないと保存できません。',false); return; }
+  var c=calc(), p=getPartner(), s=getSub();
+  S.history.unshift({
+    id:'h'+Date.now(), no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
+    partner:p.name, sub:s?s.name:'', rate:c.rate, mixed:c.mixed, total:c.total, html:sheetHTML(),
+    ovFrom: isOv()? tableRate() : null,
+    ovWhy:  isOv()? document.getElementById('inRateWhy').value.trim() : ''
+  });
+  bumpSeq(); save(); flash('printMsg','「出した納品書」に保存しました。番号を次に進めました。',true);
+  document.getElementById('inNo').value = nextNo();
+  renderSheet();
+}
+function clearAll(){
+  if(!confirm('入力した内容を消して、はじめからやり直しますか？')) return;
+  cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
+  document.getElementById('selPartner').value=''; document.getElementById('subWrap').style.display='none';
+  document.getElementById('txtNotes').value=''; document.getElementById('txtPaste').value='';
+  document.getElementById('inFind').value='';
+  document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
+  document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
+  document.getElementById('rateInfo').style.display='none';
+  renderAll();
+}
+function seqKey(){ var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10); return d.slice(0,7); }
+function nextNo(){ var k=seqKey(); var m=parseInt(k.slice(5,7),10); return m+'-'+((S.seq[k]||0)+1); }
+function bumpSeq(){ var k=seqKey(); S.seq[k]=(S.seq[k]||0)+1; }
+
+function renderHistory(){
+  var w=document.getElementById('histWrap');
+  if(!S.history.length){ w.innerHTML='<div class="empty">まだ保存された納品書はありません。</div>'; return; }
+  w.innerHTML='<table class="grid"><thead><tr><th>No.</th><th>納品日</th><th>取引先</th><th>お届け先</th>'+
+    '<th class="num">卸率</th><th class="num">合計</th><th></th></tr></thead><tbody>'+
+    S.history.map(function(h){
+      var rt = h.mixed ? '商品ごと'
+             : (h.ovFrom!=null ? '<span style="color:#e65100;font-weight:700">'+h.rate+'％</span><br><span style="font-size:12px;color:#e65100">いつもは'+h.ovFrom+'％'+(h.ovWhy?'<br>'+esc(h.ovWhy):'')+'</span>'
+             : h.rate+'％');
+      return '<tr><td>'+esc(h.no)+'</td><td>'+esc(h.date)+'</td><td>'+esc(h.partner)+'</td><td>'+esc(h.sub||'―')+
+             '</td><td class="num">'+rt+'</td><td class="num">'+yen(h.total)+' 円</td>'+
+             '<td><button class="btn sm" onclick="reprint(\''+h.id+'\')">もう一度印刷</button> '+
+             '<button class="btn danger sm" onclick="delHist(\''+h.id+'\')">削除</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function reprint(id){
+  var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
+  document.getElementById('printArea').innerHTML=h.html; window.print(); renderSheet();
+}
+function delHist(id){
+  if(!confirm('この納品書の記録を消しますか？')) return;
+  S.history=S.history.filter(function(x){return x.id!==id;}); save(); renderHistory();
+}
+
+/* ====================== 設定（台帳） ====================== */
+function saveSelf(){
+  S.self.co=document.getElementById('mCo').value; S.self.addr=document.getElementById('mAddr').value;
+  S.self.tel=document.getElementById('mTel').value; S.self.fax=document.getElementById('mFax').value;
+  S.self.inv=document.getElementById('mInv').value;
+  save(); document.getElementById('headCo').textContent=S.self.co; renderSheet();
+}
+function renderMaster(){
+  document.getElementById('mCo').value=S.self.co; document.getElementById('mAddr').value=S.self.addr;
+  document.getElementById('mTel').value=S.self.tel; document.getElementById('mFax').value=S.self.fax;
+  document.getElementById('mInv').value=S.self.inv;
+  renderPartners(); renderSubs(); renderProducts();
+}
+function renderPartners(){
+  document.getElementById('pTable').innerHTML =
+    '<table class="grid"><thead><tr><th>取引先名</th><th class="num">卸率</th><th>締日</th><th>入金日</th>'+
+    '<th>インボイス番号</th><th>覚え書き</th><th class="num">お届け先</th><th></th></tr></thead><tbody>'+
+    S.partners.map(function(p){
+      return '<tr>'+
+      '<td><input type="text" value="'+esc(p.name)+'" style="width:100%" onchange="upP(\''+p.id+'\',\'name\',this.value)"></td>'+
+      '<td class="num"><input type="number" value="'+p.baseRate+'" style="width:75px;text-align:right" onchange="upP(\''+p.id+'\',\'rate\',this.value)"></td>'+
+      '<td><input type="text" value="'+esc(p.close)+'" style="width:100px" onchange="upP(\''+p.id+'\',\'close\',this.value)"></td>'+
+      '<td><input type="text" value="'+esc(p.pay)+'" style="width:110px" onchange="upP(\''+p.id+'\',\'pay\',this.value)"></td>'+
+      '<td><input type="text" value="'+esc(p.inv)+'" style="width:150px" onchange="upP(\''+p.id+'\',\'inv\',this.value)"></td>'+
+      '<td><input type="text" value="'+esc(p.memo)+'" style="width:100%" onchange="upP(\''+p.id+'\',\'memo\',this.value)"></td>'+
+      '<td class="num">'+((p.subs&&p.subs.length)||0)+' 件</td>'+
+      '<td><button class="btn danger sm" onclick="delP(\''+p.id+'\')">削除</button></td></tr>';
+    }).join('')+'</tbody></table>';
+  var sp=document.getElementById('sPartner'), keep=sp.value;
+  sp.innerHTML=S.partners.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('');
+  if(keep) sp.value=keep;
+  fillPartnerSelect();
+}
+function upP(id,k,v){
+  var p=S.partners.filter(function(x){return x.id===id;})[0]; if(!p) return;
+  if(k==='rate'){ p.rate=Number(v)||0; p.baseRate=p.rate; } else { p[k]=v; }
+  save(); renderPartners(); renderAll();
+}
+function delP(id){
+  var p=S.partners.filter(function(x){return x.id===id;})[0];
+  if(!confirm('「'+p.name+'」を台帳から消しますか？')) return;
+  S.partners=S.partners.filter(function(x){return x.id!==id;});
+  if(cur.partnerId===id){ cur.partnerId=''; cur.subId=''; }
+  save(); renderMaster(); renderAll();
+}
+function addPartner(){
+  var n=document.getElementById('pName').value.trim();
+  if(!n){ alert('取引先名を入れてください。'); return; }
+  var r=Number(document.getElementById('pRate').value)||0;
+  S.partners.push({id:'p'+Date.now(), name:n, rate:r, baseRate:r,
+    close:document.getElementById('pClose').value.trim(), pay:document.getElementById('pPay').value.trim(),
+    memo:document.getElementById('pMemo').value.trim(), inv:'', subs:[]});
+  ['pName','pClose','pPay','pMemo'].forEach(function(x){document.getElementById(x).value='';});
+  save(); renderMaster();
+}
+function renderSubs(){
+  var id=document.getElementById('sPartner').value;
+  var p=S.partners.filter(function(x){return x.id===id;})[0];
+  var w=document.getElementById('sTable');
+  if(!p){ w.innerHTML=''; return; }
+  if(!p.subs) p.subs=[];
+  if(!p.subs.length){ w.innerHTML='<div class="empty">「'+esc(p.name)+'」にはお届け先の設定がありません（いつも基本の '+p.baseRate+'％ を使います）。</div>'; return; }
+  w.innerHTML='<div class="hint">空欄の卸率は「基本（'+p.baseRate+'％）」を使います。</div>'+
+    '<table class="grid"><thead><tr><th>お届け先名</th><th class="num">卸率(％)</th><th></th></tr></thead><tbody>'+
+    p.subs.map(function(s){
+      return '<tr><td><input type="text" value="'+esc(s.name)+'" style="width:100%" onchange="upS(\''+p.id+'\',\''+s.id+'\',\'name\',this.value)"></td>'+
+      '<td class="num"><input type="number" value="'+(s.rate==null?'':s.rate)+'" placeholder="基本" style="width:100px;text-align:right" onchange="upS(\''+p.id+'\',\''+s.id+'\',\'rate\',this.value)"></td>'+
+      '<td><button class="btn danger sm" onclick="delS(\''+p.id+'\',\''+s.id+'\')">削除</button></td></tr>';
+    }).join('')+'</tbody></table>';
+}
+function upS(pid,sid,k,v){
+  var p=S.partners.filter(function(x){return x.id===pid;})[0]; if(!p) return;
+  var s=p.subs.filter(function(x){return x.id===sid;})[0]; if(!s) return;
+  s[k] = (k==='rate') ? (v===''?null:Number(v)) : v;
+  save(); renderSubs(); renderAll();
+}
+function delS(pid,sid){
+  var p=S.partners.filter(function(x){return x.id===pid;})[0]; if(!p) return;
+  var s=p.subs.filter(function(x){return x.id===sid;})[0];
+  if(!confirm('「'+s.name+'」を消しますか？')) return;
+  p.subs=p.subs.filter(function(x){return x.id!==sid;});
+  if(cur.subId===sid) cur.subId='';
+  save(); renderMaster(); onPartner();
+}
+function addSub(){
+  var pid=document.getElementById('sPartner').value;
+  var p=S.partners.filter(function(x){return x.id===pid;})[0];
+  var n=document.getElementById('sName').value.trim();
+  if(!p||!n){ alert('取引先とお届け先名を入れてください。'); return; }
+  var rv=document.getElementById('sRate').value;
+  if(!p.subs) p.subs=[];
+  p.subs.push({id:'s'+Date.now(), name:n, rate:(rv===''?null:Number(rv))});
+  document.getElementById('sName').value=''; document.getElementById('sRate').value='';
+  save(); renderMaster();
+}
+function renderProducts(){
+  var sorted=S.products.slice().sort(function(a,b){
+    return a.group===b.group ? 0 : (a.group<b.group?-1:1);
+  });
+  document.getElementById('gTable').innerHTML=
+    '<table class="grid"><thead><tr><th>シリーズ（商品名）</th><th>大きさ・内容量</th><th class="num">上代（税抜）</th>'+
+    '<th>印刷される品名</th><th></th></tr></thead><tbody>'+
+    sorted.map(function(g){
+      return '<tr><td><input type="text" value="'+esc(g.group)+'" style="width:100%" onchange="upG(\''+g.id+'\',\'group\',this.value)"></td>'+
+      '<td><input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+g.id+'\',\'spec\',this.value)"></td>'+
+      '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
+      '<td style="color:var(--sub)">'+esc(pname(g))+'</td>'+
+      '<td><button class="btn danger sm" onclick="delG(\''+g.id+'\')">削除</button></td></tr>';
+    }).join('')+'</tbody></table>';
+  var gs=[]; S.products.forEach(function(g){ if(gs.indexOf(g.group)<0) gs.push(g.group); });
+  document.getElementById('groupList').innerHTML=gs.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
+  fillProductSelect();
+}
+function upG(id,k,v){
+  var g=S.products.filter(function(x){return x.id===id;})[0]; if(!g) return;
+  g[k]=(k==='price')?(Number(v)||0):v; save(); renderProducts();
+}
+function delG(id){
+  var g=S.products.filter(function(x){return x.id===id;})[0];
+  if(!confirm('「'+pname(g)+'」を消しますか？')) return;
+  S.products=S.products.filter(function(x){return x.id!==id;}); save(); renderProducts();
+}
+function addProduct(){
+  var n=document.getElementById('gGroup').value.trim();
+  if(!n){ alert('シリーズ（商品名）を入れてください。'); return; }
+  var sp=document.getElementById('gSpec').value.trim();
+  if(S.products.some(function(x){return x.group===n && (x.spec||'')===sp;})){
+    alert('「'+(sp?n+'　'+sp:n)+'」はすでに台帳にあります。'); return;
+  }
+  S.products.push({id:'g'+Date.now(), group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0});
+  document.getElementById('gSpec').value=''; document.getElementById('gPrice').value=0;
+  save(); renderProducts();
+}
+
+/* ====================== 書き出し・読み込み ====================== */
+function exportData(){
+  var blob=new Blob([JSON.stringify(S,null,2)],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='納品書システム_台帳_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+  flash('dataMsg','ファイルに書き出しました（ダウンロードのフォルダに入ります）。',true);
+}
+function importData(input){
+  var f=input.files[0]; if(!f) return;
+  var r=new FileReader();
+  r.onload=function(){
+    try{
+      var d=JSON.parse(r.result);
+      if(!d.self||!d.partners||!d.products) throw new Error('この形式のファイルは読み込めません');
+      if(!confirm('いまの台帳を、このファイルの内容で置きかえます。よろしいですか？')) return;
+      S=d; if(!S.history) S.history=[]; if(!S.seq) S.seq={};
+      S.products.forEach(function(g){ if(g.spec===undefined) g.spec=''; });
+      save(); boot(); showPage('create');
+      alert('台帳を読み込みました。\n取引先 '+S.partners.length+' 件、商品 '+S.products.length+' 件が入りました。');
+    }catch(e){ flash('dataMsg','読み込めませんでした：'+e.message,false); }
+  };
+  r.readAsText(f); input.value='';
+}
+function resetData(){
+  if(!confirm('最初の状態に戻すと、追加した取引先・商品・出した納品書がすべて消えます。\n本当に戻しますか？　この操作は元に戻せません。')) return;
+  S=freshState(); save(); boot(); flash('dataMsg','最初の状態に戻しました。',true);
+}
+
+/* ====================== 起動 ====================== */
+function boot(){
+  document.getElementById('headCo').textContent=S.self.co;
+  var today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
+  document.getElementById('inDate').value=today.toISOString().slice(0,10);
+  document.getElementById('inNo').value=nextNo();
+  cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
+  document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
+  document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
+  fillPartnerSelect(); renderMaster(); renderAll(); initDrop();
+  /* はじめて開いたときは「使い方」から見せる */
+  if(firstRun){ showPage('help'); firstRun=false; save(); }
+}
+load(); checkStore(); boot();
+</script>
+</body>
+</html>
