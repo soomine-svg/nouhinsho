@@ -385,8 +385,10 @@ table.nou td.lbl{text-align:center}
   <div class="step">
     <h2><span class="n">3</span>書き添えることば（なくてもOK）</h2>
     <div class="body">
-      <div class="hint">納品書の品名らんに、そのまま1行ずつ入ります。例）（〇〇様）／（9/25直送）</div>
-      <textarea id="txtNotes" style="min-height:90px" placeholder="（〇〇様）&#10;（9/25直送）"></textarea>
+      <div class="hint">納品書の品名らんに、そのまま1行ずつ入ります。例）（〇〇様）／（9/25直送）<br>
+        <b>改行がそのまま1行になります。</b>空の行を入れれば、商品の2〜3行下から書き始められます。<br>
+        打つたびに、いちばん下の「できあがりの確認」がすぐ変わります。</div>
+      <textarea id="txtNotes" style="min-height:120px" oninput="renderSheet()" placeholder="（〇〇様）&#10;（9/25直送）"></textarea>
     </div>
   </div>
 
@@ -727,6 +729,9 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>書き添えることばを、商品の少し下に置きたい</td><td><b>改行がそのまま1行になります。</b>
+            書き始める前に Enter を2回押せば、商品の2行下から始まります。<br>
+            打つたびに、いちばん下の「できあがりの確認」がすぐ変わるので、<b>見ながら位置を決められます。</b></td></tr>
           <tr><td>同じ商品を二重に登録したくない</td><td><b>同じ商品は登録できません。</b>入れようとすると知らせます。<br>
             ・手で足すとき … 「すでに台帳にあります」と出て、<b>足されません</b>。すでにある分の上代も見せます。<br>
             ・まとめて入れるとき … 確認表でその行が<b>赤</b>になり、その分は<b>足さずに</b>飛ばして、あとで件数を知らせます。<br>
@@ -772,7 +777,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-s';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-t';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1579,7 +1584,10 @@ function wareki(iso){
 function sheetHTML(){
   var p=getPartner(), c=calc(), s=S.self;
   var w=wareki(document.getElementById('inDate').value);
-  var notes=document.getElementById('txtNotes').value.split(/\r?\n/).filter(function(x){return x.trim();});
+  /* 改行＝1行。空の行もそのまま1行として出す（商品の2〜3行下に書きたいときのため）。
+     末尾の空行だけは、無駄な行が増えないように落とす。 */
+  var notes=document.getElementById('txtNotes').value.split(/\r?\n/);
+  while(notes.length && !notes[notes.length-1].trim()) notes.pop();
   var body='', n=0;
   c.rows.forEach(function(r){ n++;
     body+='<tr><td class="c-no">'+n+'</td><td>'+esc(r.name)+'</td><td class="c-qty">'+r.qty+
