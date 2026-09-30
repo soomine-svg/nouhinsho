@@ -187,6 +187,16 @@ table.nou .c-no{width:9mm;text-align:center}
 table.nou .c-qty{width:16mm;text-align:right}
 table.nou .c-list{width:26mm;text-align:right}
 table.nou .c-amt{width:30mm;text-align:right}
+/* 請求書だけに出るもの */
+.sheet .billtotal{display:table;border-collapse:collapse;margin:0 0 3mm}
+.sheet .billtotal>div{display:table-cell;border:1px solid #000;padding:1.5mm 3mm;vertical-align:middle}
+.sheet .billtotal .lb{width:32mm;text-align:center;font-size:12pt}
+.sheet .billtotal .vl{width:56mm;text-align:center;font-size:19pt;font-weight:700;letter-spacing:.05em}
+.sheet .bank{margin-top:7mm}
+.sheet .bank .cap{font-size:10.5pt;margin-bottom:1mm;padding-left:2mm}
+.sheet table.bankt{border-collapse:collapse;font-size:11.5pt}
+.sheet table.bankt td{border:1px solid #000;padding:1.2mm 5mm;text-align:center;white-space:nowrap}
+.sheet table.bankt td.k{width:26mm;letter-spacing:.5em;text-indent:.5em}
 table.nou .c-name{text-align:center}
 table.nou .c-memo{width:34mm;font-size:9pt;line-height:1.3;text-align:center}
 table.nou td.lbl{text-align:center}
@@ -229,8 +239,8 @@ table.nou td.lbl{text-align:center}
 </div>
 
 <div class="tabs">
-  <button id="tabCreate"  class="on" onclick="showPage('create')">① 納品書をつくる</button>
-  <button id="tabHistory"           onclick="showPage('history')">② 出した納品書</button>
+  <button id="tabCreate"  class="on" onclick="showPage('create')">① 納品書・請求書をつくる</button>
+  <button id="tabHistory"           onclick="showPage('history')">② 出した書類</button>
   <button id="tabMaster"            onclick="showPage('master')">③ 設定（取引先・商品）</button>
   <button id="tabHelp"              onclick="showPage('help')">④ 使い方</button>
 </div>
@@ -397,15 +407,22 @@ table.nou td.lbl{text-align:center}
     <h2><span class="n">4</span>日付と番号をたしかめて、印刷する</h2>
     <div class="body">
       <div class="row">
-        <div><label for="inDate">納品日</label><input id="inDate" type="date" onchange="renderSheet()"></div>
-        <div><label for="inNo">納品書No.</label><input id="inNo" type="text" style="width:130px" onchange="renderSheet()"></div>
+        <div style="flex:0 0 220px">
+          <label for="inKind">書類の種類</label>
+          <select id="inKind" class="big" style="width:100%" onchange="onKind()">
+            <option value="nou">納品書</option>
+            <option value="sei">請求書</option>
+          </select>
+        </div>
+        <div><label for="inDate" id="lblDate">納品日</label><input id="inDate" type="date" onchange="onDateChange()"></div>
+        <div><label for="inNo" id="lblNo">納品書No.</label><input id="inNo" type="text" style="width:130px" onchange="renderSheet()"></div>
         <div><label for="inTax">消費税</label>
           <select id="inTax" onchange="renderAll()"><option value="10">10％</option><option value="8">8％（軽減）</option><option value="0">かけない</option></select>
         </div>
       </div>
       <div style="margin-top:8px">
         <button class="btn big" onclick="doPrint()">印刷する（PDFで保存もできます）</button>
-        <button class="btn sub" onclick="saveHistory()">「出した納品書」に保存する</button>
+        <button class="btn sub" onclick="saveHistory()">「出した書類」に保存する</button>
         <button class="btn danger" onclick="clearAll()">はじめからやり直す</button>
       </div>
       <div id="printMsg" class="msg"></div>
@@ -423,7 +440,7 @@ table.nou td.lbl{text-align:center}
 
 <!-- ============ ② 出した納品書 ============ -->
 <section id="page-history" class="page">
-  <h2 style="font-size:21px;margin-bottom:6px">出した納品書</h2>
+  <h2 style="font-size:21px;margin-bottom:6px">出した書類</h2>
   <div class="hint">このパソコンの中に保存されます。もう一度印刷したいときはここから。</div>
   <div id="histWrap"></div>
 </section>
@@ -446,6 +463,15 @@ table.nou td.lbl{text-align:center}
         <div><label>TEL</label><input id="mTel" type="text" oninput="saveSelf()"></div>
         <div><label>FAX</label><input id="mFax" type="text" oninput="saveSelf()"></div>
         <div style="flex:1;min-width:240px"><label>インボイス登録番号</label><input id="mInv" type="text" style="width:100%" oninput="saveSelf()"></div>
+      </div>
+
+      <div class="hint" style="margin-top:14px"><b>振込先</b>（請求書の下に出ます。納品書には出ません）</div>
+      <div class="row">
+        <div style="flex:1;min-width:200px"><label>銀行名</label><input id="mBank" type="text" style="width:100%" placeholder="〇〇銀行" oninput="saveSelf()"></div>
+        <div style="flex:1;min-width:160px"><label>支店名</label><input id="mBranch" type="text" style="width:100%" placeholder="〇〇支店" oninput="saveSelf()"></div>
+        <div style="flex:0 0 130px"><label>種別</label><input id="mKind" type="text" style="width:100%" placeholder="普通" oninput="saveSelf()"></div>
+        <div style="flex:0 0 170px"><label>口座番号</label><input id="mAcct" type="text" style="width:100%" placeholder="1234567" oninput="saveSelf()"></div>
+        <div style="flex:1;min-width:200px"><label>名義人</label><input id="mHolder" type="text" style="width:100%" placeholder="株式会社　〇〇" oninput="saveSelf()"></div>
       </div>
     </div>
   </div>
@@ -735,6 +761,10 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>請求書をつくりたい</td><td>「4 日付と番号」の<b>「書類の種類」</b>で<b>請求書</b>をえらんでください。作り方は納品書とまったく同じです。<br>
+            請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
+            振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
+            <b>番号は納品書と請求書で別に数えます。</b></td></tr>
           <tr><td>書き添えることばを、商品の少し下に置きたい</td><td><b>改行がそのまま1行になります。</b>
             書き始める前に Enter を2回押せば、商品の2行下から始まります。<br>
             打つたびに、いちばん下の「できあがりの確認」がすぐ変わるので、<b>見ながら位置を決められます。</b></td></tr>
@@ -783,7 +813,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-v';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-w';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1618,18 +1648,34 @@ function sheetHTML(){
   notes.forEach(function(x){
     body+='<tr><td class="c-no"></td><td class="c-name">'+esc(x)+'</td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
   });
-  var filler=Math.max(0, 18-(c.rows.length+notes.length));
+  var filler=Math.max(0, (isSei()?15:18)-(c.rows.length+notes.length));
   for(var i=0;i<filler;i++) body+='<tr><td class="c-no"></td><td class="c-name"></td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
+
+  var sei=isSei();
+  /* 請求書のときだけ、表の上に「合計請求額」を出す */
+  var billTotal = sei
+    ? '<div class="billtotal"><div class="lb">合計請求額</div><div class="vl">￥'+yen(c.total)+'</div></div>'
+    : '';
+  /* 請求書のときだけ、表の下に振込先を出す */
+  var bank='';
+  if(sei && (s.bank||s.branch||s.acct||s.holder)){
+    bank='<div class="bank"><div class="cap">下記口座へご入金お願い致します</div>'+
+      '<table class="bankt">'+
+        '<tr><td>'+esc(s.bank||'')+'</td><td>'+esc(s.branch||'')+'</td></tr>'+
+        '<tr><td class="k">'+esc(s.kind||'普通')+'</td><td>'+esc(s.acct||'')+'</td></tr>'+
+        '<tr><td class="k">名義人</td><td>'+esc(s.holder||s.co||'')+'</td></tr>'+
+      '</table></div>';
+  }
 
   return '<div class="sheet">'+
     '<div class="no">No.　'+esc(document.getElementById('inNo').value)+'</div>'+
-    '<div class="ttl">納品書</div>'+
+    '<div class="ttl">'+(sei?'請求書':'納品書')+'</div>'+
     '<div class="date">'+w.g+'　'+w.y+'　年　'+w.m+'　月　'+w.d+'　日</div>'+
     '<div class="topgrid">'+
       '<div class="to">'+
         '<div class="name">'+esc(p?p.name:'')+'<span>様</span></div>'+
         '<div class="sm">'+(p&&p.inv?'インボイス登録番号　'+esc(p.inv):'&nbsp;')+'</div>'+
-        '<div class="sm">下記のとおり納品いたします。</div>'+
+        '<div class="sm">'+(sei?'下記のとおりご請求申し上げます。':'下記のとおり納品いたします。')+'</div>'+
       '</div>'+
       '<div class="from">'+
         '<div>'+esc(s.addr)+'</div>'+
@@ -1638,6 +1684,7 @@ function sheetHTML(){
         '<div>インボイス登録番号　'+esc(s.inv)+'</div>'+
       '</div>'+
     '</div>'+
+    billTotal+
     '<table class="nou"><thead><tr>'+
       '<th class="c-no">No</th><th>品　名</th><th class="c-qty">数量</th>'+
       '<th class="c-list">上代</th><th class="c-amt">金額</th><th class="c-memo">備考</th></tr></thead>'+
@@ -1647,7 +1694,9 @@ function sheetHTML(){
       '<tr><td class="c-no"></td><td class="lbl" colspan="3">消費税</td>'+
         '<td class="c-amt">'+yen(c.tax)+'</td><td class="c-memo">'+c.taxRate+'%</td></tr>'+
       '<tr><td class="lbl" colspan="4">合　計</td><td class="c-amt">'+yen(c.total)+'</td><td class="c-memo"></td></tr>'+
-    '</tbody></table></div>';
+    '</tbody></table>'+
+    bank+
+    '</div>';
 }
 function renderSheet(){
   var h = getPartner()? sheetHTML() : '<div class="empty">取引先をえらぶと、ここに納品書が出ます。</div>';
@@ -1677,11 +1726,12 @@ function saveHistory(){
   var c=calc(), p=getPartner(), s=getSub();
   S.history.unshift({
     id:'h'+Date.now(), no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
+    kind:docKind(), kindName:kindName(),
     partner:p.name, sub:s?s.name:'', rate:c.rate, mixed:c.mixed, total:c.total, html:sheetHTML(),
     ovFrom: isOv()? tableRate() : null,
     ovWhy:  isOv()? document.getElementById('inRateWhy').value.trim() : ''
   });
-  bumpSeq(); save(); flash('printMsg','「出した納品書」に保存しました。番号を次に進めました。',true);
+  bumpSeq(); save(); flash('printMsg','「出した書類」に保存しました。番号を次に進めました。',true);
   document.getElementById('inNo').value = nextNo();
   renderSheet();
 }
@@ -1696,20 +1746,35 @@ function clearAll(){
   document.getElementById('rateInfo').style.display='none';
   renderAll();
 }
-function seqKey(){ var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10); return d.slice(0,7); }
-function nextNo(){ var k=seqKey(); var m=parseInt(k.slice(5,7),10); return m+'-'+((S.seq[k]||0)+1); }
+function docKind(){ var e=document.getElementById('inKind'); return e? e.value : 'nou'; }
+function isSei(){ return docKind()==='sei'; }
+function kindName(){ return isSei()?'請求書':'納品書'; }
+/* 番号は納品書と請求書で別に数える */
+function seqKey(){
+  var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10);
+  return docKind()+':'+d.slice(0,7);
+}
+function nextNo(){ var k=seqKey(); var m=parseInt(k.slice(k.indexOf(':')+6,k.indexOf(':')+8),10); return m+'-'+((S.seq[k]||0)+1); }
 function bumpSeq(){ var k=seqKey(); S.seq[k]=(S.seq[k]||0)+1; }
+function onKind(){
+  var sei=isSei();
+  document.getElementById('lblDate').textContent = sei?'請求日':'納品日';
+  document.getElementById('lblNo').textContent   = sei?'請求書No.':'納品書No.';
+  document.getElementById('inNo').value = nextNo();
+  renderSheet();
+}
+function onDateChange(){ document.getElementById('inNo').value = nextNo(); renderSheet(); }
 
 function renderHistory(){
   var w=document.getElementById('histWrap');
   if(!S.history.length){ w.innerHTML='<div class="empty">まだ保存された納品書はありません。</div>'; return; }
-  w.innerHTML='<table class="grid"><thead><tr><th>No.</th><th>納品日</th><th>取引先</th><th>お届け先</th>'+
+  w.innerHTML='<table class="grid"><thead><tr><th style="width:90px">種類</th><th>No.</th><th>日付</th><th>取引先</th><th>お届け先</th>'+
     '<th class="num">卸率</th><th class="num">合計</th><th></th></tr></thead><tbody>'+
     S.history.map(function(h){
       var rt = h.mixed ? '商品ごと'
              : (h.ovFrom!=null ? '<span style="color:#e65100;font-weight:700">'+h.rate+'％</span><br><span style="font-size:12px;color:#e65100">いつもは'+h.ovFrom+'％'+(h.ovWhy?'<br>'+esc(h.ovWhy):'')+'</span>'
              : h.rate+'％');
-      return '<tr><td>'+esc(h.no)+'</td><td>'+esc(h.date)+'</td><td>'+esc(h.partner)+'</td><td>'+esc(h.sub||'―')+
+      return '<tr><td><b>'+esc(h.kindName||'納品書')+'</b></td><td>'+esc(h.no)+'</td><td>'+esc(h.date)+'</td><td>'+esc(h.partner)+'</td><td>'+esc(h.sub||'―')+
              '</td><td class="num">'+rt+'</td><td class="num">'+yen(h.total)+' 円</td>'+
              '<td><button class="btn sm" onclick="reprint(\''+h.id+'\')">もう一度印刷</button> '+
              '<button class="btn danger sm" onclick="delHist(\''+h.id+'\')">削除</button></td></tr>';
@@ -1725,10 +1790,12 @@ function delHist(id){
 }
 
 /* ====================== 設定（台帳） ====================== */
+var SELF_KEYS=[['mCo','co'],['mAddr','addr'],['mTel','tel'],['mFax','fax'],['mInv','inv'],
+               ['mBank','bank'],['mBranch','branch'],['mKind','kind'],['mAcct','acct'],['mHolder','holder']];
 function saveSelf(){
-  S.self.co=document.getElementById('mCo').value; S.self.addr=document.getElementById('mAddr').value;
-  S.self.tel=document.getElementById('mTel').value; S.self.fax=document.getElementById('mFax').value;
-  S.self.inv=document.getElementById('mInv').value;
+  SELF_KEYS.forEach(function(k){
+    var el=document.getElementById(k[0]); if(el) S.self[k[1]]=el.value;
+  });
   save(); document.getElementById('headCo').textContent=S.self.co; renderSheet();
 }
 function renderMaster(){
@@ -1736,9 +1803,9 @@ function renderMaster(){
   if(pb){ var has=hasPrev(); pb.disabled=!has;
     ph.textContent = has ? '※「ひとつ前の状態に戻す」は、直前の1回分だけ自動で取ってあるものに戻します。もっと前に戻すには、書き出しておいたファイルを読み込んでください。'
                          : '※ まだ変更していないため、戻せる「ひとつ前の状態」はありません。'; }
-  document.getElementById('mCo').value=S.self.co; document.getElementById('mAddr').value=S.self.addr;
-  document.getElementById('mTel').value=S.self.tel; document.getElementById('mFax').value=S.self.fax;
-  document.getElementById('mInv').value=S.self.inv;
+  SELF_KEYS.forEach(function(k){
+    var el=document.getElementById(k[0]); if(el) el.value=S.self[k[1]]||'';
+  });
   renderPartners(); renderSubs(); renderProducts(); onBulkWhere();
   fillCatSelect(); onGCat(); applyFolds();
 }
@@ -2479,7 +2546,8 @@ function boot(){
   document.getElementById('headCo').textContent=S.self.co;
   var today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
   document.getElementById('inDate').value=today.toISOString().slice(0,10);
-  document.getElementById('inNo').value=nextNo();
+  if(document.getElementById('inKind')) document.getElementById('inKind').value='nou';
+  onKind();
   cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
   document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
   document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
