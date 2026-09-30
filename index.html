@@ -931,7 +931,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-u';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-v';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1464,16 +1464,35 @@ function hanNum(v){
     .replace(/[．]/g,'.').replace(/[，,]/g,'')
     .replace(/[ \u3000]/g,'');
 }
-document.addEventListener('input', function(e){
-  var el=e.target;
-  if(!el || !el.classList || !el.classList.contains('numin')) return;
+/* 🔴 かな入力（日本語入力オン）で打っているあいだ＝「変換中」に中身を書き換えると、
+   Safari では変換が壊れて、数字が二重に入る・消える・入らなくなる（2026-10-01 本人報告「数字を入れると正常に動かない」）。
+   そこで、変換中は一切さわらず、変換が確定したとき・欄を離れたとき・ボタンを押す直前に半角へ直す。 */
+var numComposing=false;
+function isNumIn(el){ return !!(el && el.classList && el.classList.contains('numin')); }
+function fixNum(el){
+  if(!isNumIn(el)) return;
   var v=el.value, w=hanNum(v);
-  if(w!==v){
-    var pos=el.selectionStart;
-    el.value=w;
-    try{ el.setSelectionRange(pos,pos); }catch(_){}
-  }
+  if(w===v) return;
+  var focused=(document.activeElement===el), pos=0;
+  try{ pos=el.selectionStart; }catch(_){}
+  el.value=w;
+  if(focused){ var p=Math.min(pos==null?w.length:pos, w.length); try{ el.setSelectionRange(p,p); }catch(_){} }
+}
+function fixAllNums(){ if(numComposing) return; document.querySelectorAll('input.numin').forEach(fixNum); }
+document.addEventListener('compositionstart', function(e){ if(isNumIn(e.target)) numComposing=true; }, true);
+document.addEventListener('compositionend', function(e){
+  if(!isNumIn(e.target)) return;
+  numComposing=false;
+  var el=e.target; setTimeout(function(){ fixNum(el); }, 0);
 }, true);
+document.addEventListener('input', function(e){
+  if(e.isComposing || numComposing) return;
+  fixNum(e.target);
+}, true);
+/* 欄を離れたとき・確定したとき（onchange の前に走る）・ボタンを押したとき（onclick の前に走る）にも直す */
+document.addEventListener('change', function(e){ numComposing=false; fixNum(e.target); }, true);
+document.addEventListener('focusout', function(e){ if(isNumIn(e.target)){ numComposing=false; fixNum(e.target); } }, true);
+document.addEventListener('click', function(){ fixAllNums(); }, true);
 
 /* ====================== 画面きりかえ ====================== */
 function showPage(p){
