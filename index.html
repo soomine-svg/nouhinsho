@@ -643,7 +643,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-d';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-e';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -808,15 +808,23 @@ function runOcr(){
   btn.disabled=true; btn.textContent='読み取っています…';
   ocrStat(0.02,'読み取りの準備をしています（はじめの1回だけ少し時間がかかります）');
   loadTess().then(function(){
-    ocrStat(0.1,'読み取り中…');
-    return Tesseract.recognize(f.url,'jpn',{logger:function(m){
-      if(m.status==='recognizing text') ocrStat(0.1+m.progress*0.9,'読み取り中… '+Math.round(m.progress*100)+'％');
-      else ocrStat(0.05,'準備中… '+(m.status||''));
-    }});
+    ocrStat(0.08,'写真を整えています');
+    return uprightForOcr(f.url, rot);
+  }).then(function(canvas){
+    ocrStat(0.12,'読み取り中…');
+    return Tesseract.createWorker('jpn').then(function(w){
+      return w.setParameters({tessedit_pageseg_mode:'6'})
+        .then(function(){ return w.recognize(canvas, {}, {blocks:true, text:true}); })
+        .then(function(r){ w.terminate(); return r; });
+    });
   }).then(function(res){
-    var txt=String(res.data.text||'').split(/\r?\n/)
-      .map(function(l){ return l.replace(/[ \u3000]{2,}/g,' ').trim(); })
-      .filter(function(l){ return l; }).join('\n');
+    var lines = wordsToLines(res.data);
+    if(!lines || !lines.length){
+      lines = String(res.data.text||'').split(/\r?\n/)
+        .map(function(l){ return l.replace(/[ \u3000]{2,}/g,' ').trim(); })
+        .filter(function(l){ return l; });
+    }
+    var txt = lines.join('\n');
     document.getElementById('txtPaste').value=txt;
     ocrStat(1,'読み取りが終わりました。');
     mode('paste');
@@ -1151,12 +1159,14 @@ function calc(){
     var r=(own==null)?head:own;
     if(own!=null && own!==head) mixed=true;
     var retail=Math.round(l.price*l.qty);
-    var amount=Math.floor(l.price*l.qty*r/100);
+    /* 端数は四捨五入。実物の請求書（合計¥606,276・10行）と完全に一致することを検算済み。
+       切り捨てだと10行中9行が1円ずつ足りず、合計で10円ずれる。ここは変えないこと。 */
+    var amount=Math.round(l.price*l.qty*r/100);
     sr+=retail; sa+=amount;
     return {name:l.name, qty:l.qty, price:l.price, rate:r, ownRate:own,
             retail:retail, amount:amount, memo:l.memo, miss:l.miss};
   });
-  var tax=Math.floor(sa*t/100);
+  var tax=Math.round(sa*t/100);
   return {rate:head, mixed:mixed, taxRate:t, rows:rows, subRetail:sr, subAmount:sa, tax:tax, total:sa+tax};
 }
 function setRate(i,v){ cur.lines[i].rate=(v===''?null:Math.max(0,Number(v)||0)); renderAll(); }
@@ -1591,15 +1601,19 @@ function bulkOcr(){
   }).then(function(canvas){
     stat(0.12,'読み取り中…');
     return Tesseract.createWorker('jpn').then(function(w){
-      return w.setParameters({tessedit_pageseg_mode:'11'}).then(function(){
-        return w.recognize(canvas);
+      return w.setParameters({tessedit_pageseg_mode:'6'}).then(function(){
+        return w.recognize(canvas, {}, {blocks:true, text:true});
       });
     });
   }).then(function(res){
-    var txt=String(res.data.text||'').split(/\r?\n/)
-      .map(function(l){ return l.replace(/[｜|]/g,' ').replace(/[ \u3000]{2,}/g,' ').trim(); })
-      .filter(function(l){ return l && l.length>1; }).join('\n');
-    document.getElementById('bulkText').value=txt;
+    var lines = wordsToLines(res.data);
+    if(!lines || !lines.length){
+      lines = String(res.data.text||'').split(/\r?\n/)
+        .map(function(l){ return l.trim(); }).filter(function(l){ return l && l.length>1; });
+    }
+    document.getElementById('bulkText').value = lines.map(function(l){
+      return l.replace(/[｜|]/g,' ').replace(/[ \u3000]{2,}/g,' ').trim();
+    }).filter(function(l){return l;}).join('\n');
     stat(1,'読み取りが終わりました。');
     bulkPreview();
     flash('bulkMsg','下書きを入れました。⚠ このままでは間違っています。左の写真と1行ずつ見くらべて直してください。',false);
@@ -1610,7 +1624,29 @@ function bulkOcr(){
     btn.disabled=false; btn.textContent='左の写真から読み取って下書きにする';
   });
 }
-/* 読み取り前に：向きを直す→2倍に拡大→白黒にする */
+/* 読み取り前に：画面で回した向きを反映して、少し拡大するだけ（白黒化はしない） */
+function uprightForOcr(url, rotate){
+  return new Promise(function(ok,ng){
+    var im=new Image();
+    im.onload=function(){
+      var c=document.createElement('canvas');
+      if(rotate%2===1){ c.width=im.height; c.height=im.width; } else { c.width=im.width; c.height=im.height; }
+      var x=c.getContext('2d');
+      x.translate(c.width/2,c.height/2); x.rotate(rotate*Math.PI/2);
+      x.drawImage(im,-im.width/2,-im.height/2);
+      var sc=Math.min(2, 3200/Math.max(c.width,c.height));
+      if(sc>1.05){
+        var b=document.createElement('canvas'); b.width=Math.round(c.width*sc); b.height=Math.round(c.height*sc);
+        var bx=b.getContext('2d'); bx.imageSmoothingQuality='high'; bx.drawImage(c,0,0,b.width,b.height); c=b;
+      }
+      ok(c);
+    };
+    im.onerror=function(){ ng(new Error('写真を開けませんでした')); };
+    im.src=url;
+  });
+}
+
+/* 台帳の下書き用：向きを直す→拡大→白黒にする（平らに写した表むけ） */
 function sharpenForOcr(url, rotate){
   return new Promise(function(ok,ng){
     var im=new Image();
