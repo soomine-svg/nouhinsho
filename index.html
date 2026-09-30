@@ -958,7 +958,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-za';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-zb';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1430,6 +1430,7 @@ var newVerFound=null, lastVerCheck=0;
 function checkNewVersion(force){
   if(location.protocol==='file:') return;           /* ファイルで開いているときは何もしない */
   if(newVerFound) return;                            /* もう見つけて知らせている */
+  if(printing) return;                               /* 印刷画面が開いているあいだは何もしない */
   var now=Date.now();
   if(!force && now-lastVerCheck < 20000) return;     /* 立て続けに聞きに行かない */
   lastVerCheck=now;
@@ -2108,7 +2109,7 @@ function doPrint(){
     renderSheet();
     var mmH=sheetHeightMm();
     if(mmH>WARN_MM){ if(!confirm('⚠ A4の1枚に収まらないかもしれません。\n　いまの高さ：約'+mmH+'mm\n\nこのまま印刷しますか？')) return; }
-    winPrint(); saveReminder(); return;
+    winPrint(saveReminder); return;
   }
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   var ng=cur.lines.filter(function(l){return l.qchk;});
@@ -2129,8 +2130,7 @@ function doPrint(){
       '　いまの高さ：約'+mm+'mm（A4に入るのは275mmまで）\n\n'+
       '2枚に分かれて印刷されることがあります。\nこのまま印刷しますか？')) return;
   }
-  winPrint();
-  saveReminder();
+  winPrint(saveReminder);
 }
 /* 印刷しただけでは合計請求書に出ないので、消えない案内を出す */
 function saveReminder(){
@@ -2282,13 +2282,14 @@ function printInvoiceDraft(){
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   hideDoneBox();
   document.getElementById('printArea').innerHTML=renderAs('sei', document.getElementById('inDate').value);
-  winPrint();
-  renderSheet();
-  var e=document.getElementById('printMsg');
-  e.className='msg ng';
-  e.innerHTML='請求書を印刷しました。<b>'+
-    (editingId? '「出した書類に保存する」を押すと、納品書と請求書が両方差し替わります。'
-              : 'つづけて「出した書類に保存する」を押してください。納品書と請求書が両方保存されます。')+'</b>';
+  winPrint(function(){
+    renderSheet();
+    var e=document.getElementById('printMsg');
+    e.className='msg ng';
+    e.innerHTML='請求書を印刷しました。<b>'+
+      (editingId? '「出した書類に保存する」を押すと、納品書と請求書が両方差し替わります。'
+                : 'つづけて「出した書類に保存する」を押してください。納品書と請求書が両方保存されます。')+'</b>';
+  });
 }
 function editHistory(id){
   var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
@@ -2555,7 +2556,7 @@ function renderHistory(){
 }
 function reprint(id){
   var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
-  document.getElementById('printArea').innerHTML=h.html; winPrint(); renderSheet();
+  document.getElementById('printArea').innerHTML=h.html; winPrint(renderSheet);
 }
 function delHist(id){
   var h=S.history.filter(function(x){return x.id===id;})[0];
@@ -3363,16 +3364,29 @@ function applyPrn(){
     }
   }
 }
-/* 印刷はすべてここを通す（beforeprint が来ないブラウザでも、刷り直したことが分かるように） */
-function winPrint(){
+/* 印刷はすべてここを通す。
+   🔴 印刷の画面が開いているあいだは、ページの中身も見た目の設定も一切さわらない（2026-10-01 本人報告「印刷を押すと高確率で固まる」）。
+   Safari は window.print() のあと印刷画面を開いたまま先に進むことがあり、そのすぐ後に
+   印刷する紙を差し替えたり（renderSheet）、印刷用の設定を書き直したり（applyPrn）すると、
+   印刷の下見を作り直し続けて固まるおそれがある。後片づけは印刷画面が閉じてから（afterprint）まとめてやる。
+   afterprint が来ないブラウザのために、次にどこかを押したときにも後片づけする。 */
+var printing=false, afterPrintJobs=[];
+function winPrint(after){
+  flushAfterPrint();                                  /* 前回の後片づけが残っていたら先に済ませる */
   if(PRN.prof && PRN.wait[PRN.prof]){ PRN.wait[PRN.prof]=''; savePrn(); }
+  if(after) afterPrintJobs.push(after);
+  afterPrintJobs.push(applyPrn);                      /* 「合わせる」ボタンの状態を戻すのも閉じてから */
+  printing=true;
   window.print();
-  applyPrn();
 }
-/* 印刷画面を開いたら「刷り直した」とみなして、次の「合わせる」を押せるようにする */
-window.addEventListener('beforeprint', function(){
-  if(PRN.prof && PRN.wait[PRN.prof]){ PRN.wait[PRN.prof]=''; savePrn(); setTimeout(applyPrn,0); }
-});
+function flushAfterPrint(){
+  printing=false;
+  var jobs=afterPrintJobs; afterPrintJobs=[];
+  jobs.forEach(function(f){ try{ f(); }catch(e){} });
+}
+window.addEventListener('afterprint', function(){ setTimeout(flushAfterPrint, 0); });
+document.addEventListener('mousedown', function(){ if(afterPrintJobs.length) flushAfterPrint(); }, true);
+document.addEventListener('keydown',   function(){ if(afterPrintJobs.length) flushAfterPrint(); }, true);
 function onPrnProf(){ PRN.prof=document.getElementById('prnProf').value; savePrn(); applyPrn(); }
 function prnCalibrate(){
   var el=document.getElementById('prnMeasured');
