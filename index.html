@@ -319,14 +319,23 @@ table.nou td.lbl{text-align:center}
             <label for="inFind">商品をさがす（打つと下がしぼられます）</label>
             <input id="inFind" type="text" style="width:100%" placeholder="商品名の一部を打つと、しぼられます" oninput="renderPicker()">
           </div>
-          <div><label for="inQty">数量</label><input id="inQty" type="number" value="1" min="1" style="width:110px"></div>
-          <div style="flex:1;min-width:220px"><label for="inMemo">備考（なくてもOK・Enterで改行）</label><textarea id="inMemo" class="memoin" rows="2" style="width:100%" placeholder="例）担当者名など&#10;2行目はEnterで"></textarea></div>
           <div><button class="btn sub" onclick="document.getElementById('inFind').value='';pick.group='';renderPicker()">しぼりこみを消す</button></div>
         </div>
         <div class="picker">
           <h4>① 商品をえらぶ</h4>
           <div class="chips" id="chipGroups"></div>
-          <h4 id="specTitle">② 大きさ・内容量をえらぶと、明細に入ります</h4>
+          <div style="border-top:2px dashed var(--line);margin:4px 0 12px;padding-top:12px">
+            <h4 style="margin-bottom:8px">これから入れるものの 数量と備考</h4>
+            <div class="row" style="margin-bottom:0">
+              <div><label for="inQty">数量</label><input id="inQty" type="number" value="1" min="1" style="width:110px"></div>
+              <div style="flex:1;min-width:240px">
+                <label for="inMemo">備考（なくてもOK・Enterで改行）</label>
+                <textarea id="inMemo" class="memoin" rows="2" style="width:100%" placeholder="例）お届け先のお名前&#10;2行目はEnterで"></textarea>
+              </div>
+            </div>
+            <div class="hint" style="margin:8px 0 0">ここに書いておくと、下の②を押したときに<b>その商品といっしょに明細へ入ります</b>。入れたあとは空に戻ります。</div>
+          </div>
+          <h4 id="specTitle">② 大きさ・内容量をえらぶと、この数量・備考で明細に入ります</h4>
           <div class="chips" id="chipSpecs"></div>
         </div>
         <div id="addedMsg" style="display:none;background:#e8f5e9;border:2px solid #a5d6a7;color:#1b5e20;
@@ -771,6 +780,10 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>「これから入れるものの 数量と備考」って何？</td><td><b>これから入れる商品につける数量と備考</b>です。
+            先に書いておくと、下の②を押したときに<b>その商品といっしょに明細へ入ります</b>。<br>
+            備考には、実物の請求書でいう<b>お届け先のお名前</b>を入れます。入れたあとは空に戻るので、次の商品の分を書けます。<br>
+            あとから直したいときは、明細の表の「備考」らんで直せます。</td></tr>
           <tr><td>備考を2行にしたい</td><td>備考の欄で<b>Enterキー</b>を押すと、そこで改行します。好きな場所で折れます。<br>
             <b>2行にしても、印刷の行の高さは変わりません。</b><br>
             ※ 以前は空白のところで勝手に折れていましたが、いまは<b>Enterで押したところだけ</b>折れます。</td></tr>
@@ -833,7 +846,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-g';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-h';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1496,12 +1509,12 @@ function renderPicker(){
 
   var sw=document.getElementById('chipSpecs'), st=document.getElementById('specTitle');
   if(!pick.group){
-    st.textContent='② 大きさ・内容量をえらぶと、明細に入ります';
+    st.textContent='② 大きさ・内容量をえらぶと、この数量・備考で明細に入ります';
     sw.innerHTML='<button class="chip none">まず上の商品をえらんでください</button>';
     return;
   }
   var list=S.products.filter(function(g){return g.group===pick.group && matchFind(g,k);});
-  st.textContent='② 「'+pick.group+'」のどれかを押すと、そのまま明細に入ります';
+  st.textContent='② 「'+pick.group+'」のどれかを押すと、この数量・備考で明細に入ります';
   sw.innerHTML=list.map(function(g){
     return '<button class="chip spec" onclick="addPick(\''+g.id+'\')">'+esc(g.spec||'（規格なし）')+
            '<span class="p">'+yen(g.price)+'円</span></button>';
