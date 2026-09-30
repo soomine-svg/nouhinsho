@@ -692,6 +692,11 @@ table.nou td.lbl{text-align:center}
           <tr><td>画像が表示されない</td><td>もう一度読み込んでみてください。それでもだめなら、写真アプリでJPEGに保存しなおしてください。</td></tr>
           <tr><td>取引先や商品をたくさん入れたい</td><td>「③設定 → D+ まとめて入れる」で、1行ずつ書いて一度に登録できます。紙の表の写真を左に出しながら入力できます。</td></tr>
           <tr><td>③設定の画面が長くて見づらい</td><td><b>B・C・D の見出しを押すと折りたためます。</b>商品はカテゴリごとにも折りたためます。開け閉めした状態は次に開いたときも残ります。</td></tr>
+          <tr><td>大きさの単位を毎回打つのが面倒</td><td><b>カテゴリに合わせて自動で付きます。</b><br>
+            ・化粧品 … 数字だけ打てば <b>g</b> が付きます（「200」→「200g」）。「120ml」のように単位を書けばそのままです。<br>
+            ・ネックレス … 「桃 8 追加 50」のように書けば <b>「桃8P追加50cm」</b>に整います。色・追加・長さも自動で読み取ります。<br>
+            ・その他 … 単位は付きません。書いたとおりに入ります。<br>
+            写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
           <tr><td>商品のカテゴリを変えたい</td><td>「③設定 → D」の各行にある<b>カテゴリの欄</b>でえらび直せます。あとからいつでも変えられます。<br>「まとめて入れる」で足すときは、②の「どのカテゴリに入れるか」でえらんでください。</td></tr>
@@ -730,7 +735,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-m';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-n';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -747,6 +752,53 @@ function pname(g){
   if(!g.spec) return g.group;
   return (g.cat===NECK) ? (g.group+g.spec) : (g.group+'　'+g.spec);
 }
+/* カテゴリごとの、単位の既定 */
+function defUnit(cat){ return cat===NECK ? 'P' : (cat==='化粧品' ? 'g' : ''); }
+
+/* 書いてある大きさの文字を読みほどいて、手入力と同じ部品に直す。
+   例）「桃8P追加50cm」→ 色=桃 数字=8 単位=P 追加=あり 長さ=50cm
+       「200」        → 大きさ=200 単位=g（化粧品なので自動で付く）
+   読みほどけないものは、そのままの文字で残す。 */
+function normalizeSpec(cat, raw){
+  raw = String(raw==null?'':raw).trim();
+  if(!raw) return {spec:'', parts:{}};
+
+  if(cat===NECK){
+    var t=raw, p={color:'', num:'', unit:'', extra:false, length:''};
+    /* 色 */
+    for(var i=1;i<COLORS.length;i++){
+      if(t.indexOf(COLORS[i])>=0){ p.color=COLORS[i]; t=t.replace(COLORS[i],''); break; }
+    }
+    /* 「追加」 */
+    if(t.indexOf('追加')>=0){ p.extra=true; t=t.replace('追加',''); }
+    /* 長さ（先に取る。あとの数字取りに食われないように） */
+    var mL=t.match(/([0-9０-９]+)\s*(?:cm|CM|ｃｍ|ＣＭ|センチ)/);
+    if(mL){ p.length=norm(mL[1])+'cm'; t=t.replace(mL[0],''); }
+    /* 数字＋単位。「cm」を書かずに数字が2つ並ぶときは、
+       前が本数（8P など）・後ろが長さ（50→50cm）とみなす。 */
+    var nums=t.match(/[0-9０-９]+\s*[PpＰｐGgＧｇ]?/g) || [];
+    if(nums.length){
+      var first=nums[0].match(/([0-9０-９]+)\s*([PpＰｐGgＧｇ]?)/);
+      p.num=norm(first[1]);
+      var u=norm(first[2]||'');
+      p.unit = u ? (u.toLowerCase()==='g'?'g':'P') : defUnit(cat);
+      if(!p.length && nums.length>=2){
+        var last=nums[nums.length-1].match(/([0-9０-９]+)/);
+        if(last) p.length=norm(last[1])+'cm';
+      }
+    }
+    if(!p.color && !p.num && !p.length && !p.extra) return {spec:raw, parts:{}};  /* 読みほどけない */
+    return {spec:buildSpec(cat,p), parts:p};
+  }
+
+  /* 化粧品など：数字＋単位。単位が書かれていなければカテゴリの既定を付ける */
+  var m=raw.match(/^([0-9０-９]+(?:[.．][0-9０-９]+)?)\s*(.*)$/);
+  if(!m) return {spec:raw, parts:{}};
+  var size=norm(m[1]), unit=(m[2]||'').trim();
+  if(!unit) unit=defUnit(cat);
+  return {spec:buildSpec(cat,{size:size,unit:unit}), parts:{size:size, unit:unit}};
+}
+
 /* 部品から規格をつくる */
 function buildSpec(cat, parts){
   if(cat===NECK){
@@ -1686,6 +1738,15 @@ function onGCat(){
   var neck = (sel.value===NECK);
   document.getElementById('gNeck').style.display  = neck?'block':'none';
   document.getElementById('gPlain').style.display = neck?'none':'block';
+  /* 単位の初期値をカテゴリに合わせる（化粧品=g／ネックレス=P／その他=なし） */
+  var du=defUnit(sel.value);
+  if(neck){ document.getElementById('gUnitN').value = du||'P'; }
+  else {
+    var u=document.getElementById('gUnit');
+    var has=Array.prototype.some.call(u.options,function(o){return o.value===du;});
+    u.value = has ? du : '';
+    onGUnit();
+  }
   gPrev();
 }
 function onGLen(){
@@ -1779,6 +1840,11 @@ function changeCat(id,v){
   }
   var before=pname(g);
   g.cat=v;
+  /* 移した先のきまりに合わせて大きさを整え直す */
+  var nz=normalizeSpec(v, g.spec);
+  g.spec=nz.spec; var pp=nz.parts||{};
+  if(v===NECK){ g.color=pp.color||''; g.num=pp.num||''; g.unit=pp.unit||''; g.extra=!!pp.extra; g.length=pp.length||''; }
+  else { g.size=pp.size||''; g.unit=pp.unit||''; }
   save(); renderProducts();
   var after=pname(g);
   flash('gMsg','「'+esc(before)+'」を「'+esc(v)+'」に移しました。'+
@@ -1794,7 +1860,16 @@ function moveG(i,d){
 }
 function upG(id,k,v){
   var g=S.products.filter(function(x){return x.id===id;})[0]; if(!g) return;
-  g[k]=(k==='price')?(Number(v)||0):v; save(); renderProducts();
+  if(k==='price'){ g.price=Number(v)||0; }
+  else if(k==='spec'){
+    /* 「200」と打ち直したら「200g」に、「桃8P追加50cm」なら部品に分けて持ち直す */
+    var nz=normalizeSpec(g.cat||'その他', v);
+    g.spec=nz.spec; var pp=nz.parts||{};
+    if((g.cat||'')===NECK){ g.color=pp.color||''; g.num=pp.num||''; g.unit=pp.unit||''; g.extra=!!pp.extra; g.length=pp.length||''; }
+    else { g.size=pp.size||''; g.unit=pp.unit||''; }
+  }
+  else { g[k]=v; }
+  save(); renderProducts();
 }
 function delG(id){
   var g=S.products.filter(function(x){return x.id===id;})[0];
@@ -1869,10 +1944,19 @@ function bulkParse(){
          「黒6P55cm」のように数字が混じった大きさを金額と誤認しないため。 */
       var lastTok=norm(t[t.length-1]).replace(/[,，¥￥円]/g,'');
       if(/^[0-9]+$/.test(lastTok)){ price=parseInt(lastTok,10); t=t.slice(0,-1); }
-      if(t.length>=2){ spec=t[t.length-1]; name=t.slice(0,-1).join('　'); }
+      var bcat0=(document.getElementById('bulkCat')||{}).value||'その他';
+      if(bcat0===NECK){
+        /* ネックレスは「色 6 追加 55」のように空白で分かれて書かれる。
+           最初の語をシリーズ名、残りをまとめて大きさとして扱う。 */
+        name=t[0]||''; spec=t.slice(1).join(' ');
+      }
+      else if(t.length>=2){ spec=t[t.length-1]; name=t.slice(0,-1).join('　'); }
       else { name=t.join('　'); }
+      /* 大きさの文字を読みほどいて、手入力と同じ形に整える */
+      var nz=normalizeSpec(bcat0, spec);
       /* 直した下書きが正。名前さえあれば取り込み、上代が無い分はあとで入れてもらう */
-      out.push({ok:!!name, later:(price==null), name:name, spec:spec, price:price, raw:line});
+      out.push({ok:!!name, later:(price==null), name:name, spec:nz.spec, parts:nz.parts,
+                specRaw:spec, price:price, raw:line});
     }else{
       var rate=null, later=false, nm='';
       var tail=t[t.length-1];
@@ -1921,7 +2005,9 @@ function bulkPreview(){
                     :'<span style="color:var(--warn);font-weight:700">✕</span>';
       var later='<span style="color:#e65100;font-weight:700">あとで入れる</span>';
       if(k==='product'){
+        var changed = r.specRaw && r.spec!==r.specRaw;
         return '<tr class="'+cls+'"><td>'+mark+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.spec)+
+               (changed?'<br><span style="color:var(--sub);font-size:13px">（書いたのは「'+esc(r.specRaw)+'」）</span>':'')+
                '</td><td class="num">'+(r.price==null?later:yen(r.price))+'</td></tr>';
       }
       return '<tr class="'+cls+'"><td>'+mark+'</td><td>'+esc(r.name)+
@@ -1974,7 +2060,11 @@ function bulkCommit(replace){
     if(replace) S.products=[];
     rows.forEach(function(r){
       if(S.products.some(function(x){return x.group===r.name && (x.spec||'')===r.spec;})) return;
-      S.products.push({id:'g'+(t+(n++)), cat:bcat, group:r.name, spec:r.spec, price:(r.price==null?0:r.price)});
+      var np={id:'g'+(t+(n++)), cat:bcat, group:r.name, spec:r.spec, price:(r.price==null?0:r.price)};
+      var pp=r.parts||{};
+      if(bcat===NECK){ np.color=pp.color||''; np.num=pp.num||''; np.unit=pp.unit||''; np.extra=!!pp.extra; np.length=pp.length||''; }
+      else { np.size=pp.size||''; np.unit=pp.unit||''; }
+      S.products.push(np);
     });
   }
   save(); renderMaster(); onBulkWhere(); onPartner(); renderAll();
