@@ -727,12 +727,12 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
-          <tr><td>同じ商品を二重に登録していないか心配</td><td><b>同じ品名があると知らせます。</b><br>
-            ・手で足すとき … 「すでに台帳にあります」と出て、すでにある分の上代も見せます。<br>
-            ・まとめて入れるとき … 確認表でその行が<b>赤</b>になり、取り込む前に「足すか／飛ばすか」を聞きます。<br>
-            ・台帳で直したとき … 同じ品名になったら、その場で知らせます。<br>
-            <b>止めはしません。</b>同じ品名を上代ちがいで2つ持つことがあるためです。
-            台帳の見出しに「品名の重なり ○件」と出て、その行には「⚠ 同じ品名が○件あります」と付きます。</td></tr>
+          <tr><td>同じ商品を二重に登録したくない</td><td><b>同じ商品は登録できません。</b>入れようとすると知らせます。<br>
+            ・手で足すとき … 「すでに台帳にあります」と出て、<b>足されません</b>。すでにある分の上代も見せます。<br>
+            ・まとめて入れるとき … 確認表でその行が<b>赤</b>になり、その分は<b>足さずに</b>飛ばして、あとで件数を知らせます。<br>
+            　貼りつけた文の中で同じものが2回出てくるときも、1つだけ入ります。<br>
+            ・台帳で直した結果 同じになったとき … その場で知らせます。どちらかを「削除」してください。<br>
+            上代を直したいだけなら、<b>台帳のその行で直してください。</b>足し直す必要はありません。</td></tr>
           <tr><td>色や長さを直したい</td><td>「③設定 → D」の<b>「色・大きさ・長さ」の欄</b>で、そのまま選び直せます。<br>
             ネックレスは <b>色 / 数字 / 単位 / 追加 / 長さ</b> をそれぞれ選べます。長さの「その他…」で50cm・55cm以外も入れられます。<br>
             選び直すとすぐ右の「印刷される品名」が変わるので、見ながら直してください。</td></tr>
@@ -772,7 +772,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-r';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-s';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1981,8 +1981,8 @@ function specCellHtml(g){
 function warnDupAfterEdit(g){
   var d=findDups(g.cat||'その他', g.group, g.spec, g.id);
   if(d.length){
-    flash('gMsg','⚠ 「'+esc(pname(g))+'」は、いま台帳に '+(d.length+1)+' 件あります。'+
-      '上代ちがいで持つならこのままで構いません。要らないほうは「削除」してください。', false);
+    flash('gMsg','⚠ 「'+esc(pname(g))+'」が台帳に '+(d.length+1)+' 件になりました。'+
+      '同じ商品が二重に入っています。どちらかを「削除」してください。', false);
   }
 }
 
@@ -2097,10 +2097,13 @@ function addProduct(){
   var parts=gParts(), cat=parts.cat, sp=buildSpec(cat,parts);
   var dups=findDups(cat, n, sp, null);
   if(dups.length){
-    if(!confirm('⚠ 同じ品名がすでに台帳にあります。\n\n'+
-      '　いま足そうとしているもの：'+pname({cat:cat,group:n,spec:sp})+'\n\n'+
+    alert('⚠ この商品はすでに台帳にあります。二重に登録はできません。\n\n'+
+      '　入れようとしたもの：'+pname({cat:cat,group:n,spec:sp})+'\n\n'+
       '　すでにあるもの：\n'+dupNote(dups)+'\n\n'+
-      '上代ちがいで2つ持つこともあります。\nこのまま足しますか？')) return;
+      '上代を直したいときは、台帳のその行で直してください。\n'+
+      'べつの商品なら、商品名や大きさを変えてください。');
+    flash('gMsg','⚠ 「'+esc(pname({cat:cat,group:n,spec:sp}))+'」はすでに台帳にあるため、足しませんでした。', false);
+    return;
   }
   var g={id:'g'+Date.now(), cat:cat, group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0};
   if(cat===NECK){ g.color=parts.color; g.num=parts.num; g.unit=parts.unit; g.extra=parts.extra; g.length=parts.length; }
@@ -2216,6 +2219,7 @@ function bulkPreview(){
   var w=document.getElementById('bulkTable');
   if(!rows.length){ w.innerHTML=''; document.getElementById('bulkMsg').className='msg'; return; }
   var ng=rows.filter(function(r){return !r.ok;}).length;
+  var prevSeen={};
   var head = (k==='product')
     ? '<tr><th style="width:40px"></th><th>シリーズ</th><th>大きさ</th><th class="num">上代</th></tr>'
     : '<tr><th style="width:40px"></th><th>名前</th><th class="num">卸率</th></tr>';
@@ -2228,10 +2232,15 @@ function bulkPreview(){
       if(k==='product'){
         var changed = r.specRaw && r.spec!==r.specRaw;
         var bc=(document.getElementById('bulkCat')||{}).value||'その他';
-        var dd=r.ok ? findDups(bc, r.name, r.spec, null) : [];
-        if(dd.length && !cls) cls='dup';
+        var kk=r.ok ? norm(pname({cat:bc,group:r.name,spec:r.spec})) : '';
+        var inDaicho = r.ok && findDups(bc, r.name, r.spec, null).length>0;
+        var inDraft  = r.ok && !inDaicho && prevSeen[kk];
+        if(kk) prevSeen[kk]=1;
+        var dd = inDaicho || inDraft;
+        if(dd && !cls) cls='dup';
         return '<tr class="'+cls+'"><td>'+mark+'</td><td>'+esc(r.name)+
-               (dd.length?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ すでに台帳にあります</span>':'')+
+               (inDaicho?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ すでに台帳にあるため足しません</span>':'')+
+               (inDraft ?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ この下書きの中で重なっているため足しません</span>':'')+
                '</td><td>'+esc(r.spec)+
                (changed?'<br><span style="color:var(--sub);font-size:13px">（書いたのは「'+esc(r.specRaw)+'」）</span>':'')+
                '</td><td class="num">'+(r.price==null?later:yen(r.price))+'</td></tr>';
@@ -2247,11 +2256,16 @@ function bulkPreview(){
   var later=rows.filter(function(r){return r.ok && r.later;}).length;
   var dupN=0;
   if(k==='product'){
-    var bc2=(document.getElementById('bulkCat')||{}).value||'その他';
-    dupN=rows.filter(function(r){ return r.ok && findDups(bc2, r.name, r.spec, null).length; }).length;
+    var bc2=(document.getElementById('bulkCat')||{}).value||'その他', seen2={};
+    rows.forEach(function(r){
+      if(!r.ok) return;
+      var kk2=norm(pname({cat:bc2,group:r.name,spec:r.spec}));
+      if(findDups(bc2,r.name,r.spec,null).length || seen2[kk2]) dupN++;
+      seen2[kk2]=1;
+    });
   }
   var m='';
-  if(dupN) m+='⚠ すでに台帳にある品名が '+dupN+' 行あります（赤い行）。';
+  if(dupN) m+='⚠ すでに台帳にある商品が '+dupN+' 行あります（赤い行）。この分は足しません。';
   if(ng)    m+='✕ の '+ng+' 行は名前が読み取れないため取り込まれません。直してください。';
   if(later) m+=(k==='product'?'上代':'卸率')+'が無い行が '+later+' 行あります。そのまま取り込めますが、'+
                '取り込んだあと下の台帳が黄色くなるので、'+(k==='product'?'上代':'卸率')+'を入れてください。';
@@ -2276,7 +2290,7 @@ function bulkCommit(replace){
     : where+'に '+rows.length+'件 を足します。よろしいですか？';
   if(!confirm(msg)) return;
 
-  var t=Date.now(), n=0, skipDup=false, skipped=0;
+  var t=Date.now(), n=0, skipped=0, skipNames=[];
   if(k==='partner'){
     if(replace){ S.partners=[]; cur.partnerId=''; cur.subId=''; }
     rows.forEach(function(r){
@@ -2290,17 +2304,14 @@ function bulkCommit(replace){
     rows.forEach(function(r){ p.subs.push({id:'s'+(t+(n++)), name:r.name, rate:r.rate}); });
   }else{
     if(replace) S.products=[];
-    var dupRows=rows.filter(function(r){ return findDups(bcat, r.name, r.spec, null).length; });
-    if(dupRows.length && !replace){
-      var ans=confirm('⚠ すでに台帳にある品名が '+dupRows.length+' 件ふくまれています。\n\n'+
-        dupRows.slice(0,10).map(function(r){ return '　・'+pname({cat:bcat,group:r.name,spec:r.spec}); }).join('\n')+
-        (dupRows.length>10?'\n　…ほか '+(dupRows.length-10)+' 件':'')+'\n\n'+
-        '【OK】重なっている分も足す（上代ちがいで2つ持つとき）\n'+
-        '【キャンセル】重なっている分は飛ばして、残りだけ足す');
-      if(!ans) skipDup=true;
-    }
+    /* 入れ替えのときは台帳を空にしてから入れるので、重なり判定は要らない */
+    var seen={};
     rows.forEach(function(r){
-      if(skipDup && findDups(bcat, r.name, r.spec, null).length){ skipped++; return; }
+      if(!replace && findDups(bcat, r.name, r.spec, null).length){ skipped++; skipNames.push(pname({cat:bcat,group:r.name,spec:r.spec})); return; }
+      /* 同じ下書きの中で重なっている分も1つだけにする */
+      var kk=norm(pname({cat:bcat,group:r.name,spec:r.spec}));
+      if(seen[kk]){ skipped++; skipNames.push(pname({cat:bcat,group:r.name,spec:r.spec})); return; }
+      seen[kk]=1;
       var np={id:'g'+(t+(n++)), cat:bcat, group:r.name, spec:r.spec, price:(r.price==null?0:r.price)};
       var pp=r.parts||{};
       if(bcat===NECK){ np.color=pp.color||''; np.num=pp.num||''; np.unit=pp.unit||''; np.extra=!!pp.extra; np.length=pp.length||''; }
@@ -2311,8 +2322,13 @@ function bulkCommit(replace){
   save(); renderMaster(); onBulkWhere(); onPartner(); renderAll();
   document.getElementById('bulkText').value=''; document.getElementById('bulkTable').innerHTML='';
   var lt=rows.filter(function(r){return r.later;}).length;
+  if(skipped){
+    alert('⚠ すでに台帳にある商品が '+skipped+' 件ありました。\n二重にならないよう、その分は足していません。\n\n'+
+      skipNames.slice(0,12).map(function(x){return '　・'+x;}).join('\n')+
+      (skipNames.length>12?'\n　…ほか '+(skipNames.length-12)+' 件':''));
+  }
   flash('bulkMsg', where+'に '+(rows.length-skipped)+'件 取り込みました。'+
-    (skipped? '（すでにあった '+skipped+' 件は飛ばしました）' : '')+
+    (skipped? '⚠ すでにあった '+skipped+' 件は、二重にならないよう足していません。' : '')+
     (lt? 'うち '+lt+' 件は'+(k==='product'?'上代':'卸率')+'が空のままです。台帳で黄色くなっているので、数字を入れてください。' :
          '上の台帳で中身を確かめてください。'), !lt);
 }
