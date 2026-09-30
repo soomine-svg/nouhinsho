@@ -202,6 +202,14 @@ table.nou th.c-qty,table.nou th.c-list,table.nou th.c-amt{text-align:center}
 .sheet table.bankt{border-collapse:collapse;font-size:11.5pt}
 .sheet table.bankt td{border:1px solid #000;padding:1.2mm 5mm;text-align:center;white-space:nowrap}
 .sheet table.bankt td.k{width:26mm;letter-spacing:.5em;text-indent:.5em}
+/* 合計請求書の列（日付・伝票番号・金額・消費税・摘要・合計 ＝ あわせて175mm） */
+table.nou .m-date{width:24mm;text-align:center}
+table.nou .m-no{width:24mm;text-align:center}
+table.nou .m-amt{width:30mm;text-align:right}
+table.nou .m-tax{width:26mm;text-align:right}
+table.nou .m-memo{width:41mm;text-align:center}
+table.nou .m-tot{width:30mm;text-align:right}
+table.nou th.m-amt,table.nou th.m-tax,table.nou th.m-tot{text-align:center}
 table.nou .c-name{text-align:center}
 table.nou .c-memo{width:32mm;font-size:7.5pt;line-height:1.1;text-align:center;
   vertical-align:middle;padding:0.4mm 1.5mm}
@@ -303,7 +311,22 @@ table.nou td.lbl{text-align:center}
     </div>
   </div>
 
-  <div class="step">
+  <div class="step" id="stepMatome" style="display:none">
+    <h2><span class="n">2</span>この月に出した請求書をまとめる</h2>
+    <div class="body">
+      <div class="hint">「② 出した書類」に保存してある<b>納品書と請求書</b>の中から、えらんだ取引先・えらんだ月のものを並べます。
+        <b>保存していないものはここに出ません。</b>作ったら「出した書類に保存する」を押しておいてください。</div>
+      <div class="row">
+        <div><label for="mtMonth">対象の月</label><input id="mtMonth" type="month" onchange="renderMatome()"></div>
+        <div><label>&nbsp;</label><button class="btn sub" onclick="mtAll(true)">すべてえらぶ</button></div>
+        <div><label>&nbsp;</label><button class="btn sub" onclick="mtAll(false)">すべて外す</button></div>
+      </div>
+      <div id="mtList" style="margin-top:12px"></div>
+      <div id="mtMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="step" id="stepItems">
     <h2><span class="n">2</span>商品を入れる</h2>
     <div class="body">
       <div class="pick">
@@ -430,6 +453,7 @@ table.nou td.lbl{text-align:center}
           <select id="inKind" class="big" style="width:100%" onchange="onKind()">
             <option value="nou">納品書</option>
             <option value="sei">請求書</option>
+            <option value="mt">合計請求書（1か月分をまとめる）</option>
           </select>
         </div>
         <div><label for="inDate" id="lblDate">納品日</label><input id="inDate" type="date" onchange="onDateChange()"></div>
@@ -794,10 +818,14 @@ table.nou td.lbl{text-align:center}
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
             そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
+          <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td>「4 日付と番号」の「書類の種類」で<b>合計請求書</b>をえらびます。<br>
+            ① 取引先をえらぶ → ② 対象の月をえらぶ → その月に出した納品書・請求書が一覧に出ます。<br>
+            入れたくないものはチェックを外せます。日付・伝票番号・金額・消費税・摘要（お届け先）・合計が、そのまま表に並びます。<br>
+            <b>⚠ 「出した書類に保存する」を押していないものは出てきません。</b>作るたびに保存しておいてください。</td></tr>
           <tr><td>請求書をつくりたい</td><td>「4 日付と番号」の<b>「書類の種類」</b>で<b>請求書</b>をえらんでください。作り方は納品書とまったく同じです。<br>
             請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
             振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
-            <b>番号は納品書と請求書で別に数えます。</b></td></tr>
+            <b>伝票番号は納品書と請求書で続きになります</b>（9-1、9-2…）。合計請求書だけ別の通し番号です。</td></tr>
           <tr><td>書き添えることばを、商品の少し下に置きたい</td><td><b>改行がそのまま1行になります。</b>
             書き始める前に Enter を2回押せば、商品の2行下から始まります。<br>
             打つたびに、いちばん下の「できあがりの確認」がすぐ変わるので、<b>見ながら位置を決められます。</b></td></tr>
@@ -846,7 +874,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-h';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-j';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1433,6 +1461,7 @@ function onPartner(){
   document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
   var p = getPartner();
   var w = document.getElementById('subWrap');
+  if(isMt()) setTimeout(renderMatome,0);
   if(p && p.subs && p.subs.length){
     w.style.display='block';
     document.getElementById('selSub').innerHTML =
@@ -1680,6 +1709,7 @@ function wareki(iso){
   return {g:(y>=1?'令和':''), y:(y>=1?y:d.getFullYear()), m:d.getMonth()+1, d:d.getDate()};
 }
 function sheetHTML(){
+  if(isMt()) return matomeHTML();
   var p=getPartner(), c=calc(), s=S.self;
   var w=wareki(document.getElementById('inDate').value);
   /* 改行＝1行。空の行もそのまま1行として出す（商品の2〜3行下に書きたいときのため）。
@@ -1779,9 +1809,152 @@ function checkPageFit(){
   }
 }
 
+/* ====================== 合計請求書（1か月分をまとめる） ====================== */
+var mtPick={};     /* えらんだ請求書の id */
+function initMatomeMonth(){
+  var el=document.getElementById('mtMonth');
+  if(!el.value){
+    var d=document.getElementById('inDate').value || new Date().toISOString().slice(0,10);
+    el.value=d.slice(0,7);
+  }
+  renderMatome();
+}
+/* えらんだ取引先・月に出した「請求書」を、日付順に集める */
+function matomeRows(){
+  var p=getPartner(); if(!p) return [];
+  var ym=(document.getElementById('mtMonth')||{}).value||'';
+  /* 納品書も請求書も同じ伝票番号の列なので、両方まとめる（合計請求書そのものは除く） */
+  return S.history.filter(function(h){
+    return (h.kind==='sei'||h.kind==='nou') && (h.partnerId===p.id || h.partner===p.name)
+        && String(h.date||'').slice(0,7)===ym;
+  }).sort(function(a,b){
+    var d=String(a.date).localeCompare(String(b.date));
+    return d!==0 ? d : String(a.no).localeCompare(String(b.no), 'ja', {numeric:true});
+  });
+}
+/* 古い記録には税抜と消費税が入っていないので、合計から割り戻す */
+function mtNums(h){
+  var t=Number(h.total)||0;
+  var sub=(h.subAmount!=null)?Number(h.subAmount):Math.round(t/(1+(Number(h.taxRate!=null?h.taxRate:10)/100)));
+  var tax=(h.tax!=null)?Number(h.tax):(t-sub);
+  return {sub:sub, tax:tax, total:t};
+}
+function renderMatome(){
+  var w=document.getElementById('mtList'); if(!w) return;
+  var rows=matomeRows();
+  if(!getPartner()){ w.innerHTML='<div class="empty">さきに「1 お届け先をえらぶ」で取引先をえらんでください。</div>'; renderSheet(); return; }
+  if(!rows.length){
+    w.innerHTML='<div class="empty">この月に出した請求書の記録がありません。<br>'+
+      '請求書をつくったあと「出した書類に保存する」を押しておくと、ここに出ます。</div>';
+    renderSheet(); return;
+  }
+  rows.forEach(function(h){ if(mtPick[h.id]===undefined) mtPick[h.id]=true; });
+  var sum=0;
+  w.innerHTML='<table class="grid"><thead><tr><th style="width:60px">入れる</th><th style="width:120px">日付</th>'+
+    '<th style="width:90px">種類</th><th style="width:110px">伝票番号</th><th class="num" style="width:130px">金額</th>'+
+    '<th class="num" style="width:120px">消費税</th><th>摘要（お届け先）</th><th class="num" style="width:140px">合計</th></tr></thead><tbody>'+
+    rows.map(function(h){
+      var n=mtNums(h); if(mtPick[h.id]) sum+=n.total;
+      return '<tr><td style="text-align:center"><input type="checkbox"'+(mtPick[h.id]?' checked':'')+
+        ' style="width:22px;height:22px" onchange="mtToggle(\''+h.id+'\',this.checked)"></td>'+
+        '<td>'+esc(mtDateLabel(h.date))+'</td><td>'+esc(h.kindName||'')+'</td><td>'+esc(h.no)+'</td>'+
+        '<td class="num">'+yen(n.sub)+'</td><td class="num">'+yen(n.tax)+'</td>'+
+        '<td>'+esc(h.sub||'')+'</td><td class="num">'+yen(n.total)+'</td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div class="totals"><table><tr class="sum"><td>えらんだ分の合計</td><td style="text-align:right">'+yen(sum)+' 円</td></tr></table></div>';
+  renderSheet();
+}
+function mtToggle(id,v){ mtPick[id]=v; renderMatome(); }
+function mtAll(v){ matomeRows().forEach(function(h){ mtPick[h.id]=v; }); renderMatome(); }
+function mtDateLabel(iso){
+  var d=new Date(String(iso)+'T00:00:00');
+  if(isNaN(d)) return String(iso||'');
+  return (d.getMonth()+1)+'月'+d.getDate()+'日';
+}
+function matomeCalc(){
+  var rows=matomeRows().filter(function(h){ return mtPick[h.id]; });
+  var sub=0, tax=0, total=0;
+  var list=rows.map(function(h){
+    var n=mtNums(h); sub+=n.sub; tax+=n.tax; total+=n.total;
+    return {date:mtDateLabel(h.date), no:h.no, sub:n.sub, tax:n.tax, memo:h.sub||'', total:n.total};
+  });
+  return {rows:list, sub:sub, tax:tax, total:total};
+}
+
+/* 合計請求書の紙。表の列だけ違い、表から下（小計・消費税・合計・振込先）は請求書と同じ。 */
+function matomeHTML(){
+  var p=getPartner(), s=S.self, c=matomeCalc();
+  var w=wareki(document.getElementById('inDate').value);
+  var notes=document.getElementById('txtNotes').value.split(/\r?\n/);
+  while(notes.length && !notes[notes.length-1].trim()) notes.pop();
+
+  var body='';
+  c.rows.forEach(function(r){
+    body+='<tr><td class="m-date">'+esc(r.date)+'</td><td class="m-no">'+esc(r.no)+'</td>'+
+          '<td class="m-amt">'+yen(r.sub)+'</td><td class="m-tax">'+yen(r.tax)+'</td>'+
+          '<td class="m-memo">'+esc(r.memo)+'</td><td class="m-tot">'+yen(r.total)+'</td></tr>';
+  });
+  notes.forEach(function(x){
+    body+='<tr><td class="m-date"></td><td class="m-no"></td><td class="m-amt"></td>'+
+          '<td class="m-tax"></td><td class="m-memo">'+esc(x)+'</td><td class="m-tot"></td></tr>';
+  });
+  var filler=Math.max(0, 13-(c.rows.length+notes.length));
+  for(var i=0;i<filler;i++) body+='<tr><td class="m-date"></td><td class="m-no"></td><td class="m-amt"></td>'+
+    '<td class="m-tax"></td><td class="m-memo"></td><td class="m-tot"></td></tr>';
+
+  var bank='';
+  if(s.bank||s.branch||s.acct||s.holder){
+    bank='<div class="bank"><div class="cap">下記口座へご入金お願い致します</div>'+
+      '<table class="bankt">'+
+        '<tr><td>'+esc(s.bank||'')+'</td><td>'+esc(s.branch||'')+'</td></tr>'+
+        '<tr><td class="k">'+esc(s.kind||'普通')+'</td><td>'+esc(s.acct||'')+'</td></tr>'+
+        '<tr><td class="k">名義人</td><td>'+esc(s.holder||s.co||'')+'</td></tr>'+
+      '</table></div>';
+  }
+
+  return '<div class="sheet">'+
+    '<div class="no">NO'+esc(document.getElementById('inNo').value)+'</div>'+
+    '<div class="ttl">合計請求書</div>'+
+    '<div class="date">'+w.g+'　'+w.y+'　年　'+w.m+'　月　'+w.d+'　日</div>'+
+    '<div class="topgrid">'+
+      '<div class="to">'+
+        '<div class="name">'+esc(p?p.name:'')+'<span>様</span></div>'+
+        '<div class="sm">'+(p&&p.inv?'インボイス登録番号　'+esc(p.inv):'&nbsp;')+'</div>'+
+        '<div class="sm">いつもお世話になり有難うございます。</div>'+
+        '<div class="sm">下記の通りご請求申し上げます。</div>'+
+      '</div>'+
+      '<div class="from">'+
+        '<div>'+esc(s.addr)+'</div>'+
+        '<div class="co">'+esc(s.co)+'</div>'+
+        '<div>TEL　'+esc(s.tel)+'</div>'+
+        '<div>FAX　'+esc(s.fax)+'</div>'+
+        '<div>インボイス登録番号　'+esc(s.inv)+'</div>'+
+      '</div>'+
+    '</div>'+
+    '<div class="billtotal"><div class="lb">合計請求額</div><div class="vl">￥'+yen(c.total)+'</div></div>'+
+    '<table class="nou"><thead><tr>'+
+      '<th class="m-date">日　付</th><th class="m-no">伝票番号</th><th class="m-amt">金　額</th>'+
+      '<th class="m-tax">消 費 税</th><th class="m-memo">摘　要</th><th class="m-tot">合　計</th></tr></thead>'+
+      '<tbody>'+body+
+      '<tr><td class="m-date"></td><td class="lbl">小計</td><td class="m-amt">'+yen(c.sub)+'</td>'+
+        '<td class="m-tax">'+yen(c.tax)+'</td><td class="m-memo">税抜</td><td class="m-tot">'+yen(c.total)+'</td></tr>'+
+      '<tr><td class="lbl" colspan="5">合　計</td><td class="m-tot">'+yen(c.total)+'</td></tr>'+
+    '</tbody></table>'+
+    bank+
+    '</div>';
+}
+
 /* ====================== 印刷・保存・やり直し ====================== */
 function doPrint(){
   if(!getPartner()){ flash('printMsg','さきに取引先をえらんでください。',false); return; }
+  if(isMt()){
+    var mc=matomeCalc();
+    if(!mc.rows.length){ flash('printMsg','まとめる請求書がえらばれていません。',false); return; }
+    renderSheet();
+    var mmH=sheetHeightMm();
+    if(mmH>WARN_MM){ if(!confirm('⚠ A4の1枚に収まらないかもしれません。\n　いまの高さ：約'+mmH+'mm\n\nこのまま印刷しますか？')) return; }
+    window.print(); return;
+  }
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   var ng=cur.lines.filter(function(l){return l.qchk;});
   if(ng.length){
@@ -1804,12 +1977,25 @@ function doPrint(){
   window.print();
 }
 function saveHistory(){
-  if(!getPartner()||!cur.lines.length){ flash('printMsg','取引先と商品が入っていないと保存できません。',false); return; }
+  if(!getPartner()){ flash('printMsg','さきに取引先をえらんでください。',false); return; }
+  if(isMt()){
+    var mc=matomeCalc();
+    if(!mc.rows.length){ flash('printMsg','まとめる請求書がえらばれていません。',false); return; }
+    var pp=getPartner();
+    S.history.unshift({id:'h'+Date.now(), kind:'mt', kindName:'合計請求書',
+      no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
+      partner:pp.name, partnerId:pp.id, sub:'', rate:0, mixed:false,
+      subAmount:mc.sub, tax:mc.tax, taxRate:10, total:mc.total, html:sheetHTML()});
+    bumpSeq(); save(); flash('printMsg','「出した書類」に保存しました。番号を次に進めました。',true);
+    document.getElementById('inNo').value = nextNo(); renderSheet(); return;
+  }
+  if(!cur.lines.length){ flash('printMsg','取引先と商品が入っていないと保存できません。',false); return; }
   var c=calc(), p=getPartner(), s=getSub();
   S.history.unshift({
     id:'h'+Date.now(), no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
     kind:docKind(), kindName:kindName(),
-    partner:p.name, sub:s?s.name:'', rate:c.rate, mixed:c.mixed, total:c.total, html:sheetHTML(),
+    partner:p.name, partnerId:p.id, sub:s?s.name:'', rate:c.rate, mixed:c.mixed,
+    subAmount:c.subAmount, tax:c.tax, taxRate:c.taxRate, total:c.total, html:sheetHTML(),
     ovFrom: isOv()? tableRate() : null,
     ovWhy:  isOv()? document.getElementById('inRateWhy').value.trim() : ''
   });
@@ -1830,19 +2016,34 @@ function clearAll(){
 }
 function docKind(){ var e=document.getElementById('inKind'); return e? e.value : 'nou'; }
 function isSei(){ return docKind()==='sei'; }
-function kindName(){ return isSei()?'請求書':'納品書'; }
-/* 番号は納品書と請求書で別に数える */
+function isMt(){ return docKind()==='mt'; }
+function kindName(){ return isMt()?'合計請求書':(isSei()?'請求書':'納品書'); }
+/* 伝票番号は納品書と請求書で「同じ列」を共有する（月-連番）。
+   実物の合計請求書に 請求書9-1〜9-6 と 納品書9-7 が並び、
+   合計¥1,144,772 と完全一致することで確認した（2026-10-01）。
+   合計請求書だけは別の通し番号。 */
 function seqKey(){
   var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10);
-  return docKind()+':'+d.slice(0,7);
+  if(isMt()) return 'mt';
+  return 'd:'+d.slice(0,7);
 }
-function nextNo(){ var k=seqKey(); var m=parseInt(k.slice(k.indexOf(':')+6,k.indexOf(':')+8),10); return m+'-'+((S.seq[k]||0)+1); }
+function nextNo(){
+  var k=seqKey();
+  if(isMt()) return String((S.seq[k]||0)+1);        /* 合計請求書は「NO1」のような通し番号 */
+  var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10);
+  var m=parseInt(d.slice(5,7),10);
+  return m+'-'+((S.seq[k]||0)+1);
+}
 function bumpSeq(){ var k=seqKey(); S.seq[k]=(S.seq[k]||0)+1; }
 function onKind(){
-  var sei=isSei();
-  document.getElementById('lblDate').textContent = sei?'請求日':'納品日';
-  document.getElementById('lblNo').textContent   = sei?'請求書No.':'納品書No.';
+  var sei=isSei(), mt=isMt();
+  document.getElementById('lblDate').textContent = mt?'発行日':(sei?'請求日':'納品日');
+  document.getElementById('lblNo').textContent   = mt?'合計請求書No.':(sei?'請求書No.':'納品書No.');
   document.getElementById('inNo').value = nextNo();
+  /* 合計請求書は、商品を1つずつ入れるのではなく「その月に出した請求書」をまとめる */
+  var si=document.getElementById('stepItems'), sm=document.getElementById('stepMatome');
+  if(si) si.style.display = mt?'none':'block';
+  if(sm){ sm.style.display = mt?'block':'none'; if(mt) initMatomeMonth(); }
   renderSheet();
 }
 function onDateChange(){ document.getElementById('inNo').value = nextNo(); renderSheet(); }
