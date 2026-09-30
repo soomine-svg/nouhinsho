@@ -70,10 +70,13 @@ textarea{width:100%;min-height:130px;line-height:1.8}
 table.grid{width:100%;border-collapse:collapse;margin-top:10px;font-size:16px}
 table.grid th,table.grid td{border:1px solid var(--line);padding:8px 10px;text-align:left}
 #lineWrap,#pTable,#sTable,#gTable,#histWrap{overflow-x:auto}
-#lineWrap table.grid{min-width:760px}
+#lineWrap table.grid{min-width:1040px;table-layout:fixed}
+#lineWrap table.grid td:nth-child(2){word-break:break-word;min-width:230px}
 table.grid th{background:#eef2f7;font-size:15px;white-space:nowrap}
 table.grid td.num,table.grid th.num{text-align:right;white-space:nowrap}
 table.grid tr.miss td{background:#fdecec}
+table.grid tr.chk td{background:#fff8e1}
+table.grid tr.chk input[type=number]{border-color:#ffa000;background:#fffdf5;font-weight:700}
 .empty{color:var(--sub);text-align:center;padding:26px;background:#fafbfd;border:2px dashed var(--line);border-radius:10px}
 
 .totals{margin-top:16px;display:flex;justify-content:flex-end}
@@ -643,7 +646,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-f';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-g';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1161,33 +1164,38 @@ function findProduct(name){
 }
 function readPaste(){
   var raw=document.getElementById('txtPaste').value.split(/\r?\n/);
-  var added=0, missed=0;
+  var added=0, missed=0, noqty=0;
   raw.forEach(function(line){
     line=line.trim(); if(!line) return;
     if(/^(品名|商品名|No|no|番号)/.test(line) && /数量|個数|qty/i.test(line)) return;  /* 見出し行は飛ばす */
     var bare=line.replace(/[\s\u3000]/g,'');
     if(/^(発注書|ご発注書|御発注書|注文書|ご注文書|御注文書|納品書|請求書|見積書|以上|合計|小計)$/.test(bare)) return;
-    var name='', qty=1, memo='';
+    var name='', qty=1, memo='', qchk=false;   /* qchk = 数量を読み取れなかった＝人の確認が要る */
     if(line.indexOf(',')>=0 || line.indexOf('\t')>=0){
       var c=line.split(/[,\t]/);
-      name=(c[0]||'').trim(); qty=parseInt(String(c[1]||'1').replace(/[^0-9]/g,''),10)||1; memo=(c[2]||'').trim();
+      name=(c[0]||'').trim();
+      var qs=String(c[1]||'').replace(/[^0-9０-９]/g,'');
+      if(qs!==''){ qty=parseInt(norm(qs),10)||1; } else { qty=1; qchk=true; }
+      memo=(c[2]||'').trim();
     }else{
       var m=line.match(/^(.*?)[\s　]*[x×*]?[\s　]*([0-9０-９]+)[\s　]*(?:個|点|本|枚|ケ|ヶ)?$/);
       if(m && m[1].trim()){ name=m[1].trim(); qty=parseInt(norm(m[2]),10)||1; }
-      else { name=line; qty=1; }
+      else { name=line; qty=1; qchk=true; }
     }
     var g=findProduct(name);
-    if(g){ cur.lines.push({name:pname(g), price:Number(g.price), qty:qty, memo:memo, rate:null, miss:false}); added++; }
-    else  { cur.lines.push({name:name,     price:0,                qty:qty, memo:memo, rate:null, miss:true });  added++; missed++; }
+    if(g){ cur.lines.push({name:pname(g), price:Number(g.price), qty:qty, memo:memo, rate:null, miss:false, qchk:qchk}); added++; if(qchk) noqty++; }
+    else  { cur.lines.push({name:name,     price:0,                qty:qty, memo:memo, rate:null, miss:true,  qchk:qchk}); added++; missed++; if(qchk) noqty++; }
   });
   if(!added){ flash('pasteMsg','読み取れる行がありませんでした。1行に1商品ずつ貼りつけてください。',false); return; }
-  if(missed) flash('pasteMsg', added+'行を入れました。うち'+missed+'行は商品台帳に無いため、赤色にして上代0円にしています。上代を直すか、設定画面で商品を足してください。', false);
-  else       flash('pasteMsg', added+'行を明細に入れました。', true);
+  var msg=added+'行を入れました。';
+  if(missed) msg+='うち'+missed+'行は商品台帳に無いため赤色にし、上代を0円にしています。';
+  if(noqty)  msg+='うち'+noqty+'行は数量が読み取れませんでした。仮に1を入れていますが、黄色の行は必ず数量を確かめてください。';
+  flash('pasteMsg', msg, !(missed||noqty));
   renderAll();
 }
 
 function delLine(i){ cur.lines.splice(i,1); renderAll(); }
-function setQty(i,v){ cur.lines[i].qty=Math.max(1,parseInt(v,10)||1); renderAll(); }
+function setQty(i,v){ cur.lines[i].qty=Math.max(1,parseInt(v,10)||1); cur.lines[i].qchk=false; renderAll(); }
 function setPrice(i,v){ cur.lines[i].price=Math.max(0,Number(v)||0); cur.lines[i].miss=false; renderAll(); }
 function setMemo(i,v){ cur.lines[i].memo=v; renderSheet(); }
 
@@ -1204,7 +1212,7 @@ function calc(){
     var amount=Math.round(l.price*l.qty*r/100);
     sr+=retail; sa+=amount;
     return {name:l.name, qty:l.qty, price:l.price, rate:r, ownRate:own,
-            retail:retail, amount:amount, memo:l.memo, miss:l.miss};
+            retail:retail, amount:amount, memo:l.memo, miss:l.miss, qchk:!!l.qchk};
   });
   var tax=Math.round(sa*t/100);
   return {rate:head, mixed:mixed, taxRate:t, rows:rows, subRetail:sr, subAmount:sa, tax:tax, total:sa+tax};
@@ -1225,13 +1233,15 @@ function renderLines(){
     t.innerHTML=''; return;
   }
   var c=calc(), h='<table class="grid"><thead><tr>'+
-    '<th style="width:40px">No</th><th>品名</th><th class="num" style="width:100px">数量</th>'+
+    '<th style="width:44px">No</th><th style="width:auto;min-width:230px">品名</th><th class="num" style="width:100px">数量</th>'+
     '<th class="num" style="width:140px">上代（税抜）</th><th class="num" style="width:105px">卸率(％)</th>'+
     '<th class="num" style="width:130px">金額</th>'+
     '<th style="width:180px">備考</th><th style="width:70px"></th></tr></thead><tbody>';
   c.rows.forEach(function(r,i){
-    h+='<tr class="'+(r.miss?'miss':'')+'"><td>'+(i+1)+'</td>'+
-       '<td>'+esc(r.name)+(r.miss?'<br><span style="color:#c62828;font-size:13px">※台帳に無い商品です。上代を入れてください</span>':'')+'</td>'+
+    h+='<tr class="'+(r.miss?'miss':(r.qchk?'chk':''))+'"><td>'+(i+1)+'</td>'+
+       '<td>'+esc(r.name)+
+         (r.miss?'<br><span style="color:#c62828;font-size:13px">※台帳に無い商品です。上代を入れてください</span>':'')+
+         (r.qchk?'<br><span style="color:#e65100;font-size:13px">※数量が読み取れませんでした。発注書を見て数量を入れてください</span>':'')+'</td>'+
        '<td class="num"><input type="number" min="1" value="'+r.qty+'" style="width:80px;text-align:right" onchange="setQty('+i+',this.value)"></td>'+
        '<td class="num"><input type="number" min="0" value="'+r.price+'" style="width:125px;text-align:right" onchange="setPrice('+i+',this.value)"></td>'+
        '<td class="num'+(r.ownRate!=null?' ov':'')+'"><input type="number" min="0" max="100" value="'+(r.ownRate==null?'':r.ownRate)+'" placeholder="'+c.rate+'" style="width:85px;text-align:right" onchange="setRate('+i+',this.value)"></td>'+
@@ -1309,6 +1319,17 @@ function renderSheet(){
 function doPrint(){
   if(!getPartner()){ flash('printMsg','さきに取引先をえらんでください。',false); return; }
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
+  var ng=cur.lines.filter(function(l){return l.qchk;});
+  if(ng.length){
+    if(!confirm('数量が読み取れなかった行が '+ng.length+' 行あります（黄色の行）。\n'+
+      'いまは仮に「1」が入っています。\n\n'+
+      ng.map(function(l){return '　・'+l.name;}).join('\n')+'\n\n'+
+      '発注書と見くらべましたか？　このまま印刷しますか？')) return;
+  }
+  var z=cur.lines.filter(function(l){return l.miss||!l.price;});
+  if(z.length){
+    if(!confirm('上代が 0円 の行が '+z.length+' 行あります。\nこのままだと金額が 0円 で印刷されます。\n\n続けますか？')) return;
+  }
   renderSheet(); window.print();
 }
 function saveHistory(){
