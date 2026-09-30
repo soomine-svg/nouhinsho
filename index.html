@@ -505,8 +505,9 @@ table.nou td.lbl{text-align:center}
 <!-- ============ ④ 使い方 ============ -->
 <section id="page-help" class="page">
   <div class="note" style="font-size:17px">
-    <b>このファイル1つで動きます。</b>インストールも、会員登録も要りません。<br>
-    デスクトップに置いて、ダブルクリックで開いてください。
+    <b>ブックマークから開いてください。</b>インストールも、会員登録も要りません。<br>
+    改良したときは自動で新しくなります。こちらで何かしていただく必要はありません。<br>
+    <span style="font-size:14px;color:var(--sub)">この画面の版：<b id="verNow">―</b>（うまく動かないときに、この文字をお知らせください）</span>
   </div>
 
   <div class="step">
@@ -621,6 +622,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
+var APPVER = '2026-09-30-b';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1652,6 +1654,7 @@ function resetData(){
 
 /* ====================== 起動 ====================== */
 function boot(){
+  var v=document.getElementById('verNow'); if(v) v.textContent=APPVER;
   document.getElementById('headCo').textContent=S.self.co;
   var today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
   document.getElementById('inDate').value=today.toISOString().slice(0,10);
