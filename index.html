@@ -495,10 +495,11 @@ table.nou td.lbl{text-align:center}
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:8px;font-size:15px">
           刷った紙の<b>表の横幅</b>を定規で測って入れると、そのパソコンで <b>17.5cm</b> になるように合わせます：
-          <input id="prnMeasured" type="text" inputmode="decimal" class="numin" style="width:80px;text-align:right" placeholder="16.0"> cm
-          <button class="btn sm" onclick="prnCalibrate()">合わせる</button>
+          <input id="prnMeasured" type="text" inputmode="decimal" class="numin" style="width:100px;text-align:right" placeholder="測った幅"> cm
+          <button class="btn sm" id="prnCalBtn" onclick="prnCalibrate()">合わせる</button>
           <button class="btn sm sub" onclick="prnReset()">元に戻す</button>
         </div>
+        <div id="prnStatus" style="display:none;margin-top:8px;padding:8px 12px;border-radius:7px;font-size:15px"></div>
         <div class="hint" style="margin-top:6px">えらんだパソコンと調整は、<b>このパソコンのこのブラウザに</b>覚えておきます。パソコンごとに1回合わせれば、次からそのままです。</div>
       </div>
       <div id="printMsg" class="msg"></div>
@@ -956,7 +957,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-y';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-z';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -2106,7 +2107,7 @@ function doPrint(){
     renderSheet();
     var mmH=sheetHeightMm();
     if(mmH>WARN_MM){ if(!confirm('⚠ A4の1枚に収まらないかもしれません。\n　いまの高さ：約'+mmH+'mm\n\nこのまま印刷しますか？')) return; }
-    window.print(); saveReminder(); return;
+    winPrint(); saveReminder(); return;
   }
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   var ng=cur.lines.filter(function(l){return l.qchk;});
@@ -2127,7 +2128,7 @@ function doPrint(){
       '　いまの高さ：約'+mm+'mm（A4に入るのは275mmまで）\n\n'+
       '2枚に分かれて印刷されることがあります。\nこのまま印刷しますか？')) return;
   }
-  window.print();
+  winPrint();
   saveReminder();
 }
 /* 印刷しただけでは合計請求書に出ないので、消えない案内を出す */
@@ -2280,7 +2281,7 @@ function printInvoiceDraft(){
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   hideDoneBox();
   document.getElementById('printArea').innerHTML=renderAs('sei', document.getElementById('inDate').value);
-  window.print();
+  winPrint();
   renderSheet();
   var e=document.getElementById('printMsg');
   e.className='msg ng';
@@ -2553,7 +2554,7 @@ function renderHistory(){
 }
 function reprint(id){
   var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
-  document.getElementById('printArea').innerHTML=h.html; window.print(); renderSheet();
+  document.getElementById('printArea').innerHTML=h.html; winPrint(); renderSheet();
 }
 function delHist(id){
   var h=S.history.filter(function(x){return x.id===id;})[0];
@@ -3326,9 +3327,10 @@ function resetData(){
    そこで、えらんだパソコンごとに「倍率」を持ち、印刷のときだけ書類全体をその倍率で拡大・縮小する。
    倍率は、刷った表の幅を測って入れると 17.5cm になるように自動で決まる。 */
 var PRNKEY='nouhinsho_print';
-var PRN={prof:'', scale:{mac:1, pc:1}};
+var PRN={prof:'', scale:{mac:1, pc:1}, wait:{mac:'', pc:''}};
 function loadPrn(){
-  try{ var r=localStorage.getItem(PRNKEY); if(r){ var d=JSON.parse(r); if(d&&d.scale){ PRN.prof=d.prof||''; PRN.scale.mac=Number(d.scale.mac)||1; PRN.scale.pc=Number(d.scale.pc)||1; } } }catch(e){}
+  try{ var r=localStorage.getItem(PRNKEY); if(r){ var d=JSON.parse(r); if(d&&d.scale){ PRN.prof=d.prof||''; PRN.scale.mac=Number(d.scale.mac)||1; PRN.scale.pc=Number(d.scale.pc)||1;
+    if(d.wait){ PRN.wait.mac=d.wait.mac||''; PRN.wait.pc=d.wait.pc||''; } } } }catch(e){}
   if(!PRN.prof){
     var ua=navigator.userAgent;
     PRN.prof=(/Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua) && /Mac/.test(ua))? 'mac' : 'pc';
@@ -3343,22 +3345,50 @@ function applyPrn(){
   var e=document.getElementById('prnProf'); if(e) e.value=PRN.prof;
   var n=document.getElementById('prnNow');
   if(n) n.textContent = (Math.abs(sc-1)<0.0005) ? '（調整なし）' : '（調整ずみ：倍率 '+(sc*100).toFixed(1)+'％）';
+  /* 合わせたあとは、刷り直すまで「合わせる」を押せないようにする。
+     2026-10-01 本人報告：結果の表示がすぐ消えるので何度も押してしまい、押すたびに小さくなった。
+     倍率は「いまの倍率×17.5÷測った幅」なので、刷り直さずに押し直すと縮みが重なる。 */
+  var w=PRN.wait[PRN.prof], box=document.getElementById('prnStatus'), b=document.getElementById('prnCalBtn');
+  if(b){ b.disabled=!!w; b.style.opacity=w?'.45':''; b.style.cursor=w?'not-allowed':''; }
+  if(box){
+    if(w){
+      box.style.display='block'; box.style.background='#fff4e5'; box.style.border='2px solid #ffb74d'; box.style.color='#8a4500';
+      box.innerHTML='<b>✔ '+esc(w)+'cm と測った分を合わせました（倍率 '+(sc*100).toFixed(1)+'％）。</b><br>'+
+        '次は、<b>納品書をもう一度刷って、表の横幅を測ってください。</b>'+
+        '刷り直すまで「合わせる」は押せません（押すたびに小さくなるのを防ぐため）。<br>'+
+        '<span style="font-weight:400">測って 17.5cm なら完了です。ちがっていたら、刷り直したあとにその数字を入れて「合わせる」を押してください。</span>';
+    } else {
+      box.style.display='none';
+    }
+  }
 }
+/* 印刷はすべてここを通す（beforeprint が来ないブラウザでも、刷り直したことが分かるように） */
+function winPrint(){
+  if(PRN.prof && PRN.wait[PRN.prof]){ PRN.wait[PRN.prof]=''; savePrn(); }
+  window.print();
+  applyPrn();
+}
+/* 印刷画面を開いたら「刷り直した」とみなして、次の「合わせる」を押せるようにする */
+window.addEventListener('beforeprint', function(){
+  if(PRN.prof && PRN.wait[PRN.prof]){ PRN.wait[PRN.prof]=''; savePrn(); setTimeout(applyPrn,0); }
+});
 function onPrnProf(){ PRN.prof=document.getElementById('prnProf').value; savePrn(); applyPrn(); }
 function prnCalibrate(){
   var el=document.getElementById('prnMeasured');
   var m=parseFloat(hanNum(el.value).replace(/[^0-9.]/g,''));
   if(!(m>0)){ flash('printMsg','測った幅を cm で入れてください（例：16.0）。',false); return; }
   if(m>50) m=m/10;   /* mm で入れた場合（160 → 16.0） */
+  if(PRN.wait[PRN.prof]){ applyPrn(); return; }
   var cur0=PRN.scale[PRN.prof]||1, nx=cur0*17.5/m;
   if(nx<0.8 || nx>1.2){ flash('printMsg','その数字だと調整が大きすぎます（'+m+'cm）。測り直してください。',false); return; }
-  PRN.scale[PRN.prof]=nx; savePrn(); applyPrn(); el.value='';
-  flash('printMsg','「'+(PRN.prof==='mac'?'MacBook':'会社のパソコン')+'」の印刷を '+(nx*100).toFixed(1)+'％ にしました。もう一度刷って測ってみてください。',true);
+  PRN.scale[PRN.prof]=nx; PRN.wait[PRN.prof]=String(m); savePrn(); applyPrn(); el.value='';
 }
 function prnReset(){
   if(!confirm('「'+(PRN.prof==='mac'?'MacBook':'会社のパソコン')+'」の調整を元に戻しますか？')) return;
-  PRN.scale[PRN.prof]=1; savePrn(); applyPrn();
-  flash('printMsg','調整を元に戻しました。',true);
+  PRN.scale[PRN.prof]=1; PRN.wait[PRN.prof]=''; savePrn(); applyPrn();
+  var box=document.getElementById('prnStatus');
+  box.style.display='block'; box.style.background='#e8f5e9'; box.style.border='2px solid #a5d6a7'; box.style.color='#1b5e20';
+  box.innerHTML='<b>調整を元に戻しました（倍率 100％）。</b> 納品書を1枚刷って表の横幅を測り、その数字を入れて「合わせる」を押してください。';
 }
 function renderPdfHelp(){
   var el=document.getElementById('pdfHelp'); if(!el) return;
