@@ -460,6 +460,8 @@ table.nou td.lbl{text-align:center}
           </select>
         </div>
         <div><label for="inDate" id="lblDate">納品日</label><input id="inDate" type="date" onchange="onDateChange()"></div>
+        <div id="moWrap"><label for="inMonth">伝票番号の月</label>
+          <select id="inMonth" style="width:100px" onchange="onMonthChange()"></select></div>
         <div><label for="inNo" id="lblNo">納品書No.</label><input id="inNo" type="text" style="width:130px" onchange="renderSheet()"></div>
         <div><label for="inTax">消費税</label>
           <select id="inTax" onchange="renderAll()"><option value="10">10％</option><option value="8">8％（軽減）</option><option value="0">かけない</option></select>
@@ -821,6 +823,14 @@ table.nou td.lbl{text-align:center}
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
             そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
+          <tr><td>伝票番号はどう決まるの？</td><td><b>取引先ごとに、1から順に自動で付きます。</b><br>
+            「9-1」の<b>9は月</b>です。「伝票番号の月」でえらべます（請求日とは別に決められます）。<br>
+            <b>納品書と請求書は番号が続きます</b>（9-1が納品書、9-2が請求書、のように）。取引先が変わればまた1から始まります。<br>
+            合計請求書だけ別の通し番号（NO1、NO2…）で、これも取引先ごとです。<br>
+            番号は<b>保存済みの書類から毎回いちばん大きい番号を探して次を出す</b>ので、消しても飛びません。手で直せば、その次から続きます。</td></tr>
+          <tr><td>出した納品書・請求書を消したい</td><td>「② 出した書類」で、その行の<b>「削除」</b>を押してください。<br>
+            <b>⚠ 消すと合計請求書の集計からも外れます。</b>確認のときにその旨が出ます。<br>
+            中身を直したいだけなら、消さずに<b>「直す」</b>を使ってください。番号が変わりません。</td></tr>
           <tr><td>出した納品書・請求書を直したい</td><td>「② 出した書類」で、その行の<b>「直す」</b>を押してください。<br>
             作ったときの中身（取引先・お届け先・商品・数量・備考・書き添えることば）がそのまま戻ってきます。<br>
             直したら「<b>出した書類に保存する</b>」を押します。<b>同じ伝票番号のまま差し替わります</b>（番号は進みません）。<br>
@@ -882,7 +892,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-k';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-l';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1469,6 +1479,9 @@ function onPartner(){
   document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
   var p = getPartner();
   var w = document.getElementById('subWrap');
+  if(!editingId){
+    var ne=document.getElementById('inNo'); if(ne) ne.value=nextNo();
+  }
   if(isMt()) setTimeout(renderMatome,0);
   if(p && p.subs && p.subs.length){
     w.style.display='block';
@@ -2052,6 +2065,8 @@ function editHistory(id){
   document.getElementById('inKind').value=h.kind; onKind();
   document.getElementById('inDate').value=h.date||'';
   document.getElementById('inNo').value=h.no||'';
+  var mm2=/^([0-9]+)-/.exec(String(h.no||''));
+  if(mm2){ var me=document.getElementById('inMonth'); if(me) me.value=mm2[1]; }
   /* 取引先とお届け先 */
   var pid=h.partnerId;
   if(!pid){ var f=S.partners.filter(function(p){return p.name===h.partner;})[0]; if(f) pid=f.id; }
@@ -2125,35 +2140,69 @@ function docKind(){ var e=document.getElementById('inKind'); return e? e.value :
 function isSei(){ return docKind()==='sei'; }
 function isMt(){ return docKind()==='mt'; }
 function kindName(){ return isMt()?'合計請求書':(isSei()?'請求書':'納品書'); }
-/* 伝票番号は納品書と請求書で「同じ列」を共有する（月-連番）。
-   実物の合計請求書に 請求書9-1〜9-6 と 納品書9-7 が並び、
-   合計¥1,144,772 と完全一致することで確認した（2026-10-01）。
-   合計請求書だけは別の通し番号。 */
-function seqKey(){
-  var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10);
-  if(isMt()) return 'mt';
-  return 'd:'+d.slice(0,7);
+/* 伝票番号のきまり（2026-10-01 本人指定・実物で確認）
+   ・取引先ごとに 1 から順に振る
+   ・「9-1」の 9 は月。日付とは別にえらべる
+   ・納品書と請求書は同じ番号の列を共有する
+     （実物の合計請求書に 請求書9-1〜9-6 と 納品書9-7 が並び、合計¥1,144,772 と一致）
+   ・合計請求書だけは別の通し番号（NO1、NO2…）。これも取引先ごと
+   番号は数え上げのメモではなく、保存済みの書類から毎回いちばん大きい番号を探して +1 する。
+   こうすると、消しても番号が飛ばず、手で直しても次がそれに続く。 */
+function docMonth(){
+  var e=document.getElementById('inMonth');
+  if(e && e.value) return parseInt(e.value,10);
+  var d=document.getElementById('inDate').value||'';
+  return d? parseInt(d.slice(5,7),10) : (new Date().getMonth()+1);
 }
+function fillMonthSelect(){
+  var e=document.getElementById('inMonth'); if(!e) return;
+  if(!e.options.length){
+    var h='';
+    for(var i=1;i<=12;i++) h+='<option value="'+i+'">'+i+' 月</option>';
+    e.innerHTML=h;
+  }
+}
+function onMonthChange(){ if(!editingId) document.getElementById('inNo').value=nextNo(); renderSheet(); }
 function nextNo(){
-  var k=seqKey();
-  if(isMt()) return String((S.seq[k]||0)+1);        /* 合計請求書は「NO1」のような通し番号 */
-  var d=document.getElementById('inDate').value||new Date().toISOString().slice(0,10);
-  var m=parseInt(d.slice(5,7),10);
-  return m+'-'+((S.seq[k]||0)+1);
+  var p=getPartner();
+  if(!p) return '';
+  var mx=0;
+  if(isMt()){
+    S.history.forEach(function(h){
+      if(h.kind==='mt' && sameP(h,p)){ var n=parseInt(h.no,10); if(n>mx) mx=n; }
+    });
+    return String(mx+1);
+  }
+  var m=docMonth(), re=new RegExp('^'+m+'-([0-9]+)$');
+  S.history.forEach(function(h){
+    if((h.kind==='nou'||h.kind==='sei') && sameP(h,p)){
+      var mm=re.exec(String(h.no||'').trim());
+      if(mm){ var n=parseInt(mm[1],10); if(n>mx) mx=n; }
+    }
+  });
+  return m+'-'+(mx+1);
 }
-function bumpSeq(){ var k=seqKey(); S.seq[k]=(S.seq[k]||0)+1; }
+function sameP(h,p){ return h.partnerId===p.id || h.partner===p.name; }
+function bumpSeq(){ /* 番号は履歴から計算するので、数え上げのメモは使わない */ }
 function onKind(){
   var sei=isSei(), mt=isMt();
   document.getElementById('lblDate').textContent = mt?'発行日':(sei?'請求日':'納品日');
   document.getElementById('lblNo').textContent   = mt?'合計請求書No.':(sei?'請求書No.':'納品書No.');
   document.getElementById('inNo').value = nextNo();
   /* 合計請求書は、商品を1つずつ入れるのではなく「その月に出した請求書」をまとめる */
+  var mw=document.getElementById('moWrap'); if(mw) mw.style.display = mt?'none':'flex';
   var si=document.getElementById('stepItems'), sm=document.getElementById('stepMatome');
   if(si) si.style.display = mt?'none':'block';
   if(sm){ sm.style.display = mt?'block':'none'; if(mt) initMatomeMonth(); }
   renderSheet();
 }
-function onDateChange(){ document.getElementById('inNo').value = nextNo(); renderSheet(); }
+function onDateChange(){
+  var d=document.getElementById('inDate').value;
+  var e=document.getElementById('inMonth');
+  if(d && e && !editingId) e.value=String(parseInt(d.slice(5,7),10));
+  if(!editingId) document.getElementById('inNo').value = nextNo();
+  renderSheet();
+}
 
 function renderHistory(){
   var w=document.getElementById('histWrap');
@@ -2940,6 +2989,9 @@ function boot(){
   document.getElementById('headCo').textContent=S.self.co;
   var today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
   document.getElementById('inDate').value=today.toISOString().slice(0,10);
+  fillMonthSelect();
+  var mo=document.getElementById('inMonth');
+  if(mo) mo.value=String(parseInt((document.getElementById('inDate').value||'').slice(5,7),10)||(new Date().getMonth()+1));
   if(document.getElementById('inKind')) document.getElementById('inKind').value='nou';
   onKind();
   cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
