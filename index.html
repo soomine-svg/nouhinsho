@@ -184,9 +184,9 @@ table.nou{width:100%;border-collapse:collapse;font-size:10.5pt}
 table.nou th,table.nou td{border:1px solid #000;padding:1.3mm 2mm;height:7mm}
 table.nou th{text-align:center;font-weight:400}
 table.nou .c-no{width:8mm;text-align:center}
-table.nou .c-qty{width:13mm;text-align:right}
-table.nou .c-list{width:22mm;text-align:right}
-table.nou .c-amt{width:26mm;text-align:right}
+table.nou .c-qty{width:13mm;text-align:center}
+table.nou .c-list{width:22mm;text-align:center}
+table.nou .c-amt{width:26mm;text-align:center}
 /* 請求書だけに出るもの */
 .sheet .billtotal{display:table;border-collapse:collapse;margin:0 0 3mm}
 .sheet .billtotal>div{display:table-cell;border:1px solid #000;padding:1.5mm 3mm;vertical-align:middle}
@@ -764,7 +764,7 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
-          <tr><td>A4の1枚に収まるか心配</td><td><b>用紙はA4（たて）です。</b>1枚に収まらないときは、
+          <tr><td>A4の1枚に収まるか心配</td><td><b>用紙はA4（たて）、左右の余白は2.5cmです。</b>1枚に収まらないときは、
             「できあがりの確認」の上に<b>オレンジの帯</b>が出ます。印刷を押したときにも一度止まります。<br>
             収まる目安は、<b>納品書で20件ほど、請求書で13件ほど</b>です（請求書は下に振込先が入るぶん少なくなります）。<br>
             帯が出たら、商品を減らすか、「書き添えることば」の空の行を減らしてください。</td></tr>
@@ -823,7 +823,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-c';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-d';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
