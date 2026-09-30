@@ -217,8 +217,13 @@ table.nou .c-memo{width:32mm;font-size:7.5pt;line-height:1.1;text-align:center;
 table.nou td.lbl{text-align:center}
 
 @media print{
-  /* 表の幅を17.5cmにするため、左右の余白は (210-175)/2 = 17.5mm になる（本人指定）。上下は11mm。 */
-  @page{size:A4 portrait;margin:11mm 17.5mm}
+  /* 表の幅を17.5cmにするため、左右の余白は (210-175)/2 = 17.5mm になる（本人指定）。上下は11mm。
+     ブラウザは用紙の余白に「題名・日付・URL・ページ数」を刷る。余白を0にすると刷る場所が無くなり消える
+     （2026-10-01 本人指示）。そのぶんの余白は #printArea の内側に取る。
+     2枚目に回ったときも上下の余白が付くよう box-decoration-break:clone を指定。 */
+  @page{size:A4 portrait;margin:0}
+  #printArea{padding:11mm 17.5mm;box-sizing:border-box;
+    -webkit-box-decoration-break:clone;box-decoration-break:clone}
   body{background:#fff}
   .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn{display:none !important}
   body.withimg{padding-left:0 !important}
@@ -926,7 +931,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-t';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-u';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -3276,8 +3281,10 @@ function renderPdfHelp(){
   var isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
   el.innerHTML = isSafari
     ? '※ 紙に出さずPDFにするには、印刷画面の<b>左下の「PDF ▾」</b>を押して<b>「PDFとして保存」</b>をえらびます。'+
-      '<br>　見あたらないときは、下の「PDFで保存できないときは」を開いてください。'
-    : '※ 印刷画面で「<b>送信先</b>」を「<b>PDFに保存</b>」にすると、紙に出さずPDFファイルが作れます。';
+      '<br>　見あたらないときは、下の「PDFで保存できないときは」を開いてください。'+
+      '<br>※ 紙の上下の端に日付やURLが出るときは、印刷画面の<b>「ヘッダとフッタをプリント」のチェックを外して</b>ください（1回外せば、次からも外れたままです）。'
+    : '※ 印刷画面で「<b>送信先</b>」を「<b>PDFに保存</b>」にすると、紙に出さずPDFファイルが作れます。'+
+      '<br>※ 紙の上下の端に日付やURLが出るときは、印刷画面の「<b>詳細設定</b>」を開いて<b>「ヘッダーとフッター」のチェックを外して</b>ください。';
 }
 
 function boot(){
