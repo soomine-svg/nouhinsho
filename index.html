@@ -162,6 +162,13 @@ table.nou td.lbl{text-align:center}
   <div class="co" id="headCo"></div>
 </div>
 
+<div id="rescueWarn" style="display:none;background:#fff4e5;border-bottom:3px solid #e65100;color:#8a4500;padding:14px 20px;font-weight:700">
+  ⚠ 前回の台帳が読み取れませんでした。<br>
+  <span style="font-weight:400">中身は消さずに取ってあります。下のボタンでファイルに出せますので、そのまま大峯までお送りください。
+  「③設定 → E」の「ひとつ前の状態に戻す」で戻せることもあります。</span>
+  <button class="btn sub" style="margin-top:8px" onclick="downloadRescue()">取ってあるデータをファイルに出す</button>
+</div>
+
 <div id="storeWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
   ⚠ このパソコンでは、台帳の自動保存ができません。<br>
   <span style="font-weight:400">画面を閉じると、足した取引先や商品が消えます。作業のあとに必ず
@@ -487,8 +494,10 @@ table.nou td.lbl{text-align:center}
       <button class="btn sub" onclick="exportData()">ファイルに書き出す</button>
       <button class="btn sub" onclick="document.getElementById('impFile').click()">ファイルから読み込む</button>
       <input id="impFile" type="file" accept=".json" style="display:none" onchange="importData(this)">
+      <button class="btn sub" onclick="restorePrev()" id="prevBtn">ひとつ前の状態に戻す</button>
       <button class="btn danger" onclick="resetData()">最初の状態に戻す</button>
       <div id="dataMsg" class="msg"></div>
+      <div class="hint" id="prevHint" style="margin-top:10px"></div>
     </div>
   </div>
 </section>
@@ -809,13 +818,22 @@ function freshState(){
           history:[], seq:{}};
 }
 var firstRun = false;
+var rescued = false;   /* 前回のデータが読めなかった */
 function load(){
+  var raw = null;
+  try{ raw = localStorage.getItem(KEY); }catch(e){ raw = null; }
+  firstRun = !raw;
+  if(!raw){ S = freshState(); return; }
+  var ok = false;
   try{
-    var raw = localStorage.getItem(KEY);
-    firstRun = !raw;
-    S = raw ? JSON.parse(raw) : freshState();
-  }catch(e){ S = freshState(); firstRun = true; }
-  if(!S.self||!S.partners||!S.products){ S = freshState(); }
+    var d = JSON.parse(raw);
+    if(d && d.self && Array.isArray(d.partners) && Array.isArray(d.products)){ S = d; ok = true; }
+  }catch(e){}
+  if(!ok){
+    /* ここが肝心：黙って空にしない。読めなかった中身は退避して、画面で知らせる。 */
+    try{ localStorage.setItem(KEY_RESCUE, raw); }catch(e){}
+    S = freshState(); rescued = true; firstRun = false;
+  }
   if(!S.history) S.history = [];
   if(!S.seq) S.seq = {};
   /* 旧形式（品名ひとつ）を シリーズ＋大きさ に分けて引き継ぐ */
@@ -831,8 +849,19 @@ function load(){
   });
 }
 var canStore = true;
+var KEY_PREV = KEY+'_prev';      /* ひとつ前の台帳（自動バックアップ） */
+var KEY_RESCUE = KEY+'_rescue';  /* 読めなかった台帳の退避先 */
+
 function save(){
-  try{ localStorage.setItem(KEY, JSON.stringify(S)); }
+  try{
+    var before = localStorage.getItem(KEY);
+    var after = JSON.stringify(S);
+    /* 書き換える前に、ひとつ前の状態を自動で取っておく */
+    if(before && before !== after){
+      try{ localStorage.setItem(KEY_PREV, before); }catch(e){}
+    }
+    localStorage.setItem(KEY, after);
+  }
   catch(e){ canStore=false; showStoreWarn(); }
 }
 /* このパソコン・このブラウザで自動保存ができるか、起動時に確かめる */
@@ -845,6 +874,39 @@ function showStoreWarn(){
   var b=document.getElementById('storeWarn');
   if(!b) return;
   b.style.display = canStore ? 'none' : 'block';
+}
+/* 前回のデータが読めなかったときの知らせ */
+function showRescue(){
+  var b=document.getElementById('rescueWarn');
+  if(!b) return;
+  b.style.display = rescued ? 'block' : 'none';
+}
+function downloadRescue(){
+  var raw='';
+  try{ raw = localStorage.getItem(KEY_RESCUE)||''; }catch(e){}
+  if(!raw){ alert('取ってあるデータが見つかりませんでした。'); return; }
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([raw],{type:'application/json'}));
+  a.download='読み取れなかった台帳_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click(); URL.revokeObjectURL(a.href);
+}
+/* ひとつ前の状態に戻す */
+function hasPrev(){
+  try{ return !!localStorage.getItem(KEY_PREV); }catch(e){ return false; }
+}
+function restorePrev(){
+  var raw=null;
+  try{ raw = localStorage.getItem(KEY_PREV); }catch(e){}
+  if(!raw){ flash('dataMsg','ひとつ前の状態は残っていません。',false); return; }
+  var d=null;
+  try{ d=JSON.parse(raw); }catch(e){}
+  if(!d||!d.self||!Array.isArray(d.partners)){ flash('dataMsg','ひとつ前の状態が読み取れませんでした。',false); return; }
+  if(!confirm('いまの台帳を、ひとつ前の状態に戻します。\n\n'+
+      'いま：取引先 '+S.partners.length+'件／商品 '+S.products.length+'件\n'+
+      'ひとつ前：取引先 '+d.partners.length+'件／商品 '+d.products.length+'件\n\nよろしいですか？')) return;
+  S=d; if(!S.history) S.history=[]; if(!S.seq) S.seq={};
+  save(); boot(); showPage('master');
+  flash('dataMsg','ひとつ前の状態に戻しました。',true);
 }
 
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -1236,6 +1298,10 @@ function saveSelf(){
   save(); document.getElementById('headCo').textContent=S.self.co; renderSheet();
 }
 function renderMaster(){
+  var pb=document.getElementById('prevBtn'), ph=document.getElementById('prevHint');
+  if(pb){ var has=hasPrev(); pb.disabled=!has;
+    ph.textContent = has ? '※「ひとつ前の状態に戻す」は、直前の1回分だけ自動で取ってあるものに戻します。もっと前に戻すには、書き出しておいたファイルを読み込んでください。'
+                         : '※ まだ変更していないため、戻せる「ひとつ前の状態」はありません。'; }
   document.getElementById('mCo').value=S.self.co; document.getElementById('mAddr').value=S.self.addr;
   document.getElementById('mTel').value=S.self.tel; document.getElementById('mFax').value=S.self.fax;
   document.getElementById('mInv').value=S.self.inv;
@@ -1597,7 +1663,7 @@ function boot(){
   /* はじめて開いたときは「使い方」から見せる */
   if(firstRun){ showPage('help'); firstRun=false; save(); }
 }
-load(); checkStore(); boot();
+load(); checkStore(); showRescue(); boot();
 </script>
 </body>
 </html>
