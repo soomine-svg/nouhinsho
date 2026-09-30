@@ -211,6 +211,8 @@ table.nou .m-tax{width:26mm;text-align:right}
 table.nou .m-memo{width:41mm;text-align:center}
 table.nou .m-tot{width:30mm;text-align:right}
 table.nou th.m-amt,table.nou th.m-tax,table.nou th.m-tot{text-align:center}
+table.nou td.m-blank{border:none}
+table.nou td.m-sum{font-size:12pt}
 table.nou .c-name{text-align:center}
 table.nou .c-memo{width:32mm;font-size:7.5pt;line-height:1.1;text-align:center;
   vertical-align:middle;padding:0.4mm 1.5mm}
@@ -222,13 +224,16 @@ table.nou td.lbl{text-align:center}
      （2026-10-01 本人指示）。そのぶんの余白は #printArea の内側に取る。
      2枚目に回ったときも上下の余白が付くよう box-decoration-break:clone を指定。 */
   @page{size:A4 portrait;margin:0}
-  #printArea{padding:11mm 17.5mm;box-sizing:border-box;
+  /* 🔴 表の幅は 17.5cm に固定する（2026-10-01 本人が実物で測って 16cm だった）。
+     左右を「余白」で作ると、Safari は自分の余白（プリンタの刷れない幅）をさらに足すので、表が縮む。
+     幅そのものを 175mm と決めて真ん中に置けば、どのブラウザの余白でも 17.5cm のまま。 */
+  #printArea{padding:11mm 0;box-sizing:border-box;
     -webkit-box-decoration-break:clone;box-decoration-break:clone}
   body{background:#fff}
   .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn{display:none !important}
   body.withimg{padding-left:0 !important}
   #printArea{display:block !important}
-  .sheet{width:auto;padding:0}
+  .sheet{width:175mm;margin:0 auto;padding:0}
 }
 </style>
 </head>
@@ -931,7 +936,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-w';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-x';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -2063,9 +2068,10 @@ function matomeHTML(){
       '<th class="m-date">日　付</th><th class="m-no">伝票番号</th><th class="m-amt">金　額</th>'+
       '<th class="m-tax">消 費 税</th><th class="m-memo">摘　要</th><th class="m-tot">合　計</th></tr></thead>'+
       '<tbody>'+body+
-      '<tr><td class="m-date"></td><td class="lbl">小計</td><td class="m-amt">'+yen(c.sub)+'</td>'+
-        '<td class="m-tax">'+yen(c.tax)+'</td><td class="m-memo">税抜</td><td class="m-tot">'+yen(c.total)+'</td></tr>'+
-      '<tr><td class="lbl" colspan="5">合　計</td><td class="m-tot">'+yen(c.total)+'</td></tr>'+
+      /* 表の下は実物の合計請求書に合わせる（2026-10-01 本人が写真で指定）：
+         左の3列は枠なしの空白、消費税の列に「小　計」「合　計」、摘要＋合計の列をつないで金額（右寄せ）。 */
+      '<tr><td class="m-blank" colspan="3"></td><td class="lbl m-sum">小　計</td><td class="m-tot" colspan="2">'+yen(c.total)+'</td></tr>'+
+      '<tr><td class="m-blank" colspan="3"></td><td class="lbl m-sum">合　計</td><td class="m-tot" colspan="2">'+yen(c.total)+'</td></tr>'+
     '</tbody></table>'+
     bank+
     '</div>';
