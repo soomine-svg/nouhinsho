@@ -91,6 +91,29 @@ table.grid tr.chk input[type=number]{border-color:#ffa000;background:#fffdf5;fon
 .chk{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;font-size:18px}
 .chk input{width:22px;height:22px;cursor:pointer}
 td.ov input{background:#fff4e5;border-color:#ff9800;font-weight:700}
+.step>h2.fold{cursor:pointer;user-select:none}
+.step>h2.fold:hover{background:#dfeaf7}
+.step>h2 .caret{margin-left:auto;font-size:15px;color:var(--accent-d);transition:transform .15s}
+.step.closed>h2 .caret{transform:rotate(-90deg)}
+.step.closed>.body{display:none}
+.step>h2 .cnt{font-size:14px;font-weight:400;color:var(--sub)}
+
+.cat{border:2px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden;background:#fff}
+.cat>h4{margin:0;background:#eef2f7;padding:10px 14px;font-size:16px;color:#33445c;
+  display:flex;align-items:center;gap:10px;cursor:pointer;user-select:none}
+.cat>h4:hover{background:#e2eaf3}
+.cat>h4 .caret{margin-left:auto;font-size:13px;transition:transform .15s}
+.cat.closed>h4 .caret{transform:rotate(-90deg)}
+.cat.closed>.catbody{display:none}
+.cat>h4 .cnt{font-size:13px;font-weight:400;color:var(--sub)}
+.catbody{padding:10px}
+.ordbtn{background:#eef2f7;border:1px solid var(--line);border-radius:6px;
+  width:30px;height:26px;line-height:1;font-size:13px;color:#41526a;padding:0}
+.ordbtn:hover:not(:disabled){background:var(--soft);border-color:var(--accent)}
+.ordbtn:disabled{opacity:.3;cursor:default}
+.nameprev{background:#eaf2fb;border:2px solid #b6d4f2;border-radius:9px;padding:12px 16px;margin-top:12px}
+.nameprev b{font-size:20px;color:var(--accent-d)}
+
 .bstep{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--accent-d);
   margin:22px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--line)}
 .bstep .bn{background:var(--accent);color:#fff;width:30px;height:30px;border-radius:50%;
@@ -405,8 +428,8 @@ table.nou td.lbl{text-align:center}
     </div>
   </div>
 
-  <div class="step">
-    <h2><span class="n">B</span>取引先と卸率</h2>
+  <div class="step" id="stepB">
+    <h2 class="fold" onclick="toggleStep('stepB')"><span class="n">B</span>取引先と卸率<span class="cnt" id="cntB"></span><span class="caret">▼</span></h2>
     <div class="body">
       <div class="row">
         <div style="flex:1;min-width:200px"><label>取引先名</label><input id="pName" type="text" style="width:100%"></div>
@@ -420,8 +443,8 @@ table.nou td.lbl{text-align:center}
     </div>
   </div>
 
-  <div class="step">
-    <h2><span class="n">C</span>お届け先ごとの卸率</h2>
+  <div class="step" id="stepC">
+    <h2 class="fold" onclick="toggleStep('stepC')"><span class="n">C</span>お届け先ごとの卸率<span class="cnt" id="cntC"></span><span class="caret">▼</span></h2>
     <div class="body">
       <div class="hint">卸したあとの「その先のお届け先」で卸率が変わる取引先は、ここで設定します。</div>
       <div class="row">
@@ -434,17 +457,61 @@ table.nou td.lbl{text-align:center}
     </div>
   </div>
 
-  <div class="step">
-    <h2><span class="n">D</span>商品</h2>
+  <div class="step" id="stepD">
+    <h2 class="fold" onclick="toggleStep('stepD')"><span class="n">D</span>商品<span class="cnt" id="cntD"></span><span class="caret">▼</span></h2>
     <div class="body">
-      <div class="hint">品名は「シリーズ」と「大きさ・内容量」に分けて入れます。印刷には「シリーズ　大きさ」の形で出ます。<br>
-        同じシリーズ名でいくつも足すと、①でシリーズを押す→②で大きさを押す、の2手でえらべるようになります。</div>
+      <div class="hint">同じシリーズ名でいくつも足すと、納品書を作るときに「シリーズを押す→大きさを押す」の2手でえらべます。</div>
+
       <div class="row">
-        <div style="flex:1;min-width:220px"><label>シリーズ（商品名）</label><input id="gGroup" type="text" style="width:100%" placeholder="例）〇〇クリーム" list="groupList"><datalist id="groupList"></datalist></div>
-        <div style="flex:0 0 180px"><label>大きさ・内容量</label><input id="gSpec" type="text" style="width:100%" placeholder="例）45g（無ければ空）"></div>
-        <div><label>上代（税抜）</label><input id="gPrice" type="number" value="0" style="width:160px"></div>
+        <div style="flex:0 0 240px">
+          <label for="gCat">カテゴリ</label>
+          <select id="gCat" style="width:100%" onchange="onGCat()"></select>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <label for="gGroup">シリーズ（商品名）</label>
+          <input id="gGroup" type="text" style="width:100%" placeholder="例）〇〇ネックレス" list="groupList" oninput="gPrev()">
+          <datalist id="groupList"></datalist>
+        </div>
+      </div>
+
+      <div id="gNeck" style="display:none">
+        <div class="row">
+          <div style="flex:0 0 130px"><label for="gColor">色</label>
+            <select id="gColor" style="width:100%" onchange="gPrev()"></select></div>
+          <div style="flex:0 0 110px"><label for="gNum">数字</label>
+            <input id="gNum" type="text" style="width:100%" placeholder="8" oninput="gPrev()"></div>
+          <div style="flex:0 0 100px"><label for="gUnitN">単位</label>
+            <select id="gUnitN" style="width:100%" onchange="gPrev()"><option>P</option><option>g</option><option value="">なし</option></select></div>
+          <div style="flex:0 0 120px"><label>&nbsp;</label>
+            <label class="chk" style="font-size:16px;height:44px"><input type="checkbox" id="gExtra" onchange="gPrev()">追加</label></div>
+          <div style="flex:0 0 150px"><label for="gLen">長さ</label>
+            <select id="gLen" style="width:100%" onchange="onGLen()">
+              <option value="">なし</option><option>50cm</option><option>55cm</option><option value="__">手入力</option>
+            </select></div>
+          <div style="flex:0 0 130px;display:none" id="gLenFreeWrap"><label for="gLenFree">長さ（手入力）</label>
+            <input id="gLenFree" type="text" style="width:100%" placeholder="60cm" oninput="gPrev()"></div>
+        </div>
+      </div>
+
+      <div id="gPlain">
+        <div class="row">
+          <div style="flex:0 0 130px"><label for="gSize">大きさ・内容量</label>
+            <input id="gSize" type="text" style="width:100%" placeholder="200" oninput="gPrev()"></div>
+          <div style="flex:0 0 130px"><label for="gUnit">単位</label>
+            <select id="gUnit" style="width:100%" onchange="onGUnit()">
+              <option>g</option><option>P</option><option value="">なし</option><option value="__">その他</option>
+            </select></div>
+          <div style="flex:0 0 130px;display:none" id="gUnitFreeWrap"><label for="gUnitFree">単位（手入力）</label>
+            <input id="gUnitFree" type="text" style="width:100%" placeholder="ml" oninput="gPrev()"></div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div><label for="gPrice">上代（税抜）</label><input id="gPrice" type="number" value="0" style="width:170px"></div>
         <div><button class="btn" onclick="addProduct()">商品を足す</button></div>
       </div>
+
+      <div class="nameprev">納品書に出る品名：<b id="gPrev">―</b></div>
       <div id="gTable"></div>
     </div>
   </div>
@@ -613,6 +680,9 @@ table.nou td.lbl{text-align:center}
           <tr><td>iPhoneの写真（HEIC）を使いたい</td><td><b>そのまま読み込めます。</b>変換は要りません。読み込むときに少しだけ時間がかかります。</td></tr>
           <tr><td>画像が表示されない</td><td>もう一度読み込んでみてください。それでもだめなら、写真アプリでJPEGに保存しなおしてください。</td></tr>
           <tr><td>取引先や商品をたくさん入れたい</td><td>「③設定 → D+ まとめて入れる」で、1行ずつ書いて一度に登録できます。紙の表の写真を左に出しながら入力できます。</td></tr>
+          <tr><td>③設定の画面が長くて見づらい</td><td><b>B・C・D の見出しを押すと折りたためます。</b>商品はカテゴリごとにも折りたためます。開け閉めした状態は次に開いたときも残ります。</td></tr>
+          <tr><td>商品の並び順を変えたい</td><td>「③設定 → D」の各行の左にある <b>▲▼</b> で入れ替えられます。この順番が、納品書を作るときの並びにもなります。</td></tr>
+          <tr><td>ネックレスの品名を入れたい</td><td>カテゴリで「ネックレス」をえらぶと、<b>色・数字・単位・「追加」・長さ</b>をえらぶ欄が出ます。<br>できあがる品名は入力欄の下に出るので、見ながら組み立ててください。（例：〇〇桃8P追加50cm）</td></tr>
           <tr><td>文字がうまく読み取れない</td><td>「発注書の画像を見ながら入れる」の下にある<b>「うまく読めないときは」</b>を開いてください。パソコンに元から入っている文字認識の使い方が書いてあります。</td></tr>
           <tr><td>まちがえて消してしまった</td><td>「はじめからやり直す」を押す前なら、明細は画面に残っています。台帳を戻すには、書き出しておいたファイルから読み込みます。</td></tr>
         </tbody>
@@ -646,14 +716,32 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-h';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-i';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
 var PARTNERS0 = [];
 var PRODUCTS0 = [];
-/* 品名＝シリーズ＋規格。印刷にはこの形で出ます。 */
-function pname(g){ return g.spec ? g.group+'　'+g.spec : g.group; }
+var NECK='ネックレス';
+var CATS=[NECK,'化粧品','その他'];
+var COLORS=['','桃','黒','青','白','紺','紫','緑'];
+
+/* 品名＝シリーズ＋規格。
+   ネックレスは請求書の書式に合わせて区切りなしでつなぐ（例：〇〇桃8P追加50cm）。
+   それ以外は全角スペースを挟む（例：〇〇クリーム　200g）。 */
+function pname(g){
+  if(!g.spec) return g.group;
+  return (g.cat===NECK) ? (g.group+g.spec) : (g.group+'　'+g.spec);
+}
+/* 部品から規格をつくる */
+function buildSpec(cat, parts){
+  if(cat===NECK){
+    /* 数字が空なら単位も付けない（「P」だけ残らないように） */
+    var n = parts.num ? (parts.num + (parts.unit||'')) : '';
+    return (parts.color||'') + n + (parts.extra?'追加':'') + (parts.length||'');
+  }
+  return parts.size ? (parts.size + (parts.unit||'')) : '';
+}
 
 /* ====================== iPhoneのHEIC写真を画像に変える ====================== */
 var HEIF='https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif-bundle.js';
@@ -947,6 +1035,7 @@ function load(){
       delete g.name;
     }
     if(g.spec===undefined) g.spec='';
+    if(g.cat===undefined) g.cat='その他';   /* カテゴリが無い古いデータ */
   });
 }
 var canStore = true;
@@ -1013,6 +1102,28 @@ function restorePrev(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function yen(n){ return Number(n||0).toLocaleString('ja-JP'); }
 function flash(id,text,ok){ var e=document.getElementById(id); e.textContent=text; e.className='msg '+(ok?'ok':'ng'); setTimeout(function(){e.className='msg';},4000); }
+
+/* ====================== 折りたたみ ====================== */
+var UIKEY='nouhinsho_ui';
+var UI={folds:{stepB:true, stepC:true, stepD:false}, cats:{}};   /* true=閉じている */
+function loadUI(){
+  try{ var r=localStorage.getItem(UIKEY); if(r){ var d=JSON.parse(r);
+    if(d&&d.folds) UI.folds=d.folds; if(d&&d.cats) UI.cats=d.cats; } }catch(e){}
+}
+function saveUI(){ try{ localStorage.setItem(UIKEY, JSON.stringify(UI)); }catch(e){} }
+function toggleStep(id){
+  UI.folds[id]=!UI.folds[id]; saveUI(); applyFolds();
+}
+function applyFolds(){
+  ['stepB','stepC','stepD'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.classList.toggle('closed', !!UI.folds[id]);
+  });
+}
+function toggleCat(name){
+  UI.cats[name]=!UI.cats[name]; saveUI();
+  var el=document.getElementById('cat_'+encodeURIComponent(name));
+  if(el) el.classList.toggle('closed', !!UI.cats[name]);
+}
 
 /* ====================== 画面きりかえ ====================== */
 function showPage(p){
@@ -1124,15 +1235,32 @@ function renderPicker(){
   if(groups.indexOf(pick.group)<0) pick.group='';
 
   var gw=document.getElementById('chipGroups');
-  gw.innerHTML = groups.length
-    ? groups.map(function(n){
+  if(!groups.length){
+    gw.innerHTML = S.products.length
+      ? '<button class="chip none">見つかりませんでした</button>'
+      : '<button class="chip none">商品が台帳に入っていません（「③設定 → D」で足せます）</button>';
+  }else{
+    /* カテゴリごとに見出しを付けて並べる（押す回数は2手のまま） */
+    var cats=[];
+    groups.forEach(function(n){
+      var g0=S.products.filter(function(g){return g.group===n;})[0];
+      var c=(g0&&g0.cat)||'その他';
+      if(cats.indexOf(c)<0) cats.push(c);
+    });
+    gw.innerHTML = cats.map(function(cat){
+      var gs=groups.filter(function(n){
+        var g0=S.products.filter(function(g){return g.group===n;})[0];
+        return ((g0&&g0.cat)||'その他')===cat;
+      });
+      if(!gs.length) return '';
+      var inner = gs.map(function(n){
         var c=S.products.filter(function(g){return g.group===n && matchFind(g,k);}).length;
         return '<button class="chip'+(pick.group===n?' on':'')+'" onclick="pickGroup(\''+esc(n).replace(/'/g,"&#39;")+'\')">'+esc(n)+
                (c>1?'<span class="p">'+c+'種類</span>':'')+'</button>';
-      }).join('')
-    : (S.products.length
-        ? '<button class="chip none">見つかりませんでした</button>'
-        : '<button class="chip none">商品が台帳に入っていません（「③設定 → D」で足せます）</button>');
+      }).join('');
+      return (cats.length>1 ? '<div style="width:100%;font-size:14px;color:var(--sub);font-weight:700;margin:4px 0 -2px">'+esc(cat)+'</div>' : '')+inner;
+    }).join('');
+  }
 
   var sw=document.getElementById('chipSpecs'), st=document.getElementById('specTitle');
   if(!pick.group){
@@ -1427,6 +1555,7 @@ function renderMaster(){
   document.getElementById('mTel').value=S.self.tel; document.getElementById('mFax').value=S.self.fax;
   document.getElementById('mInv').value=S.self.inv;
   renderPartners(); renderSubs(); renderProducts(); onBulkWhere();
+  fillCatSelect(); onGCat(); applyFolds();
 }
 function renderPartners(){
   document.getElementById('pTable').innerHTML =
@@ -1443,6 +1572,7 @@ function renderPartners(){
       '<td class="num">'+((p.subs&&p.subs.length)||0)+' 件</td>'+
       '<td><button class="btn danger sm" onclick="delP(\''+p.id+'\')">削除</button></td></tr>';
     }).join('')+'</tbody></table>';
+  var cb=document.getElementById('cntB'); if(cb) cb.textContent='（'+S.partners.length+' 件）';
   var sp=document.getElementById('sPartner'), keep=sp.value;
   sp.innerHTML=S.partners.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'</option>';}).join('');
   if(keep) sp.value=keep;
@@ -1473,6 +1603,8 @@ function addPartner(){
 function renderSubs(){
   var id=document.getElementById('sPartner').value;
   var p=S.partners.filter(function(x){return x.id===id;})[0];
+  var cc=document.getElementById('cntC');
+  if(cc) cc.textContent = p ? '（'+esc(p.name)+'：'+((p.subs&&p.subs.length)||0)+' 件）' : '';
   var w=document.getElementById('sTable');
   if(!p){ w.innerHTML=''; return; }
   if(!p.subs) p.subs=[];
@@ -1510,23 +1642,109 @@ function addSub(){
   document.getElementById('sName').value=''; document.getElementById('sRate').value='';
   save(); renderMaster();
 }
+/* --- 商品を足すフォーム --- */
+function catList(){
+  var out=CATS.slice();
+  S.products.forEach(function(g){ var c=g.cat||'その他'; if(out.indexOf(c)<0) out.push(c); });
+  return out;
+}
+function fillCatSelect(){
+  var sel=document.getElementById('gCat'); if(!sel) return;
+  var keep=sel.value;
+  sel.innerHTML=catList().map(function(c){return '<option>'+esc(c)+'</option>';}).join('')
+    + '<option value="__">＋ 新しいカテゴリを作る</option>';
+  sel.value = keep && catList().indexOf(keep)>=0 ? keep : CATS[0];
+  var cs=document.getElementById('gColor');
+  if(cs && !cs.options.length){
+    cs.innerHTML=COLORS.map(function(c){return '<option value="'+c+'">'+(c||'（色なし）')+'</option>';}).join('');
+  }
+}
+function onGCat(){
+  var sel=document.getElementById('gCat');
+  if(sel.value==='__'){
+    var n=prompt('新しいカテゴリの名前を入れてください。');
+    if(n && n.trim()){ CATS.push(n.trim()); fillCatSelect(); sel.value=n.trim(); }
+    else { sel.value=CATS[0]; }
+  }
+  var neck = (sel.value===NECK);
+  document.getElementById('gNeck').style.display  = neck?'block':'none';
+  document.getElementById('gPlain').style.display = neck?'none':'block';
+  gPrev();
+}
+function onGLen(){
+  var v=document.getElementById('gLen').value;
+  document.getElementById('gLenFreeWrap').style.display = (v==='__')?'flex':'none';
+  gPrev();
+}
+function onGUnit(){
+  var v=document.getElementById('gUnit').value;
+  document.getElementById('gUnitFreeWrap').style.display = (v==='__')?'flex':'none';
+  gPrev();
+}
+function gParts(){
+  var cat=document.getElementById('gCat').value;
+  if(cat===NECK){
+    var lv=document.getElementById('gLen').value;
+    return {cat:cat,
+      color:document.getElementById('gColor').value,
+      num:document.getElementById('gNum').value.trim(),
+      unit:document.getElementById('gUnitN').value,
+      extra:document.getElementById('gExtra').checked,
+      length:(lv==='__'? document.getElementById('gLenFree').value.trim() : lv)};
+  }
+  var uv=document.getElementById('gUnit').value;
+  return {cat:cat,
+    size:document.getElementById('gSize').value.trim(),
+    unit:(uv==='__'? document.getElementById('gUnitFree').value.trim() : uv)};
+}
+function gPrev(){
+  var cat=document.getElementById('gCat').value;
+  var g={cat:cat, group:document.getElementById('gGroup').value.trim(), spec:buildSpec(cat,gParts())};
+  document.getElementById('gPrev').textContent = g.group ? pname(g) : '―';
+}
+
+/* 商品台帳：カテゴリごとにまとめ、カテゴリ単位で折りたためる。並びは台帳の順（▲▼で入れ替え）。 */
 function renderProducts(){
-  var sorted=S.products.slice().sort(function(a,b){
-    return a.group===b.group ? 0 : (a.group<b.group?-1:1);
-  });
-  document.getElementById('gTable').innerHTML=
-    '<table class="grid"><thead><tr><th>シリーズ（商品名）</th><th>大きさ・内容量</th><th class="num">上代（税抜）</th>'+
-    '<th>印刷される品名</th><th></th></tr></thead><tbody>'+
-    sorted.map(function(g){
-      return '<tr><td><input type="text" value="'+esc(g.group)+'" style="width:100%" onchange="upG(\''+g.id+'\',\'group\',this.value)"></td>'+
-      '<td><input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+g.id+'\',\'spec\',this.value)"></td>'+
-      '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
-      '<td style="color:var(--sub)">'+esc(pname(g))+'</td>'+
-      '<td><button class="btn danger sm" onclick="delG(\''+g.id+'\')">削除</button></td></tr>';
-    }).join('')+'</tbody></table>';
+  var w=document.getElementById('gTable');
+  if(!S.products.length){
+    w.innerHTML='<div class="empty">まだ商品が入っていません。上で足してください。</div>';
+  }else{
+    var order=[];
+    S.products.forEach(function(g){ var c=g.cat||'その他'; if(order.indexOf(c)<0) order.push(c); });
+    w.innerHTML = order.map(function(cat){
+      var items=S.products.filter(function(g){ return (g.cat||'その他')===cat; });
+      var closed = !!UI.cats[cat];
+      return '<div class="cat'+(closed?' closed':'')+'" id="cat_'+encodeURIComponent(cat)+'">'+
+        '<h4 onclick="toggleCat(\''+esc(cat).replace(/'/g,"&#39;")+'\')">'+esc(cat)+
+          '<span class="cnt">'+items.length+' 件</span><span class="caret">▼</span></h4>'+
+        '<div class="catbody"><table class="grid">'+
+        '<thead><tr><th style="width:74px">並び</th><th>シリーズ（商品名）</th><th style="width:170px">大きさ・内容量</th>'+
+        '<th class="num" style="width:150px">上代（税抜）</th><th>印刷される品名</th><th style="width:76px"></th></tr></thead><tbody>'+
+        items.map(function(g){
+          var i=S.products.indexOf(g);
+          var up=i>0, dn=i<S.products.length-1;
+          return '<tr>'+
+          '<td><button class="ordbtn" onclick="moveG('+i+',-1)"'+(up?'':' disabled')+' title="上へ">▲</button> '+
+              '<button class="ordbtn" onclick="moveG('+i+',1)"'+(dn?'':' disabled')+' title="下へ">▼</button></td>'+
+          '<td><input type="text" value="'+esc(g.group)+'" style="width:100%" onchange="upG(\''+g.id+'\',\'group\',this.value)"></td>'+
+          '<td><input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+g.id+'\',\'spec\',this.value)"></td>'+
+          '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
+          '<td style="color:var(--sub)">'+esc(pname(g))+'</td>'+
+          '<td><button class="btn danger sm" onclick="delG(\''+g.id+'\')">削除</button></td></tr>';
+        }).join('')+'</tbody></table></div></div>';
+    }).join('');
+  }
   var gs=[]; S.products.forEach(function(g){ if(gs.indexOf(g.group)<0) gs.push(g.group); });
   document.getElementById('groupList').innerHTML=gs.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
-  fillProductSelect();
+  var c=document.getElementById('cntD'); if(c) c.textContent='（'+S.products.length+' 件）';
+  fillCatSelect(); fillProductSelect();
+}
+/* 表示の並びを入れ替える */
+function moveG(i,d){
+  var j=i+d;
+  if(j<0||j>=S.products.length) return;
+  var t=S.products[i]; S.products[i]=S.products[j]; S.products[j]=t;
+  save(); renderProducts();
 }
 function upG(id,k,v){
   var g=S.products.filter(function(x){return x.id===id;})[0]; if(!g) return;
@@ -1540,13 +1758,19 @@ function delG(id){
 function addProduct(){
   var n=document.getElementById('gGroup').value.trim();
   if(!n){ alert('シリーズ（商品名）を入れてください。'); return; }
-  var sp=document.getElementById('gSpec').value.trim();
-  if(S.products.some(function(x){return x.group===n && (x.spec||'')===sp;})){
-    alert('「'+(sp?n+'　'+sp:n)+'」はすでに台帳にあります。'); return;
+  var parts=gParts(), cat=parts.cat, sp=buildSpec(cat,parts);
+  if(S.products.some(function(x){return x.group===n && (x.spec||'')===sp && (x.cat||'その他')===cat;})){
+    alert('「'+pname({cat:cat,group:n,spec:sp})+'」はすでに台帳にあります。'); return;
   }
-  S.products.push({id:'g'+Date.now(), group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0});
-  document.getElementById('gSpec').value=''; document.getElementById('gPrice').value=0;
-  save(); renderProducts();
+  var g={id:'g'+Date.now(), cat:cat, group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0};
+  if(cat===NECK){ g.color=parts.color; g.num=parts.num; g.unit=parts.unit; g.extra=parts.extra; g.length=parts.length; }
+  else { g.size=parts.size; g.unit=parts.unit; }
+  S.products.push(g);
+  /* 続けて足しやすいよう、シリーズとカテゴリは残す */
+  if(cat===NECK){ document.getElementById('gNum').value=''; document.getElementById('gExtra').checked=false; }
+  else { document.getElementById('gSize').value=''; }
+  document.getElementById('gPrice').value=0;
+  save(); renderProducts(); gPrev();
 }
 
 /* ====================== まとめて入れる ====================== */
@@ -1794,11 +2018,11 @@ function boot(){
   cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
   document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
   document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
-  fillPartnerSelect(); renderMaster(); renderAll(); initDrop();
+  fillPartnerSelect(); renderMaster(); applyFolds(); renderAll(); initDrop();
   /* はじめて開いたときは「使い方」から見せる */
   if(firstRun){ showPage('help'); firstRun=false; save(); }
 }
-load(); checkStore(); showRescue(); boot();
+load(); loadUI(); checkStore(); showRescue(); boot();
 </script>
 </body>
 </html>
