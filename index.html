@@ -473,7 +473,21 @@ table.nou td.lbl{text-align:center}
         <button class="btn danger" onclick="clearAll()">はじめからやり直す</button>
       </div>
       <div id="printMsg" class="msg"></div>
-      <div class="hint" style="margin-top:14px">※ 印刷画面で「送信先」を「PDFに保存」にすると、紙に出さずにPDFファイルが作れます。</div>
+      <div id="pdfHelp" class="hint" style="margin-top:14px"></div>
+      <details style="margin-top:10px">
+        <summary style="cursor:pointer;font-weight:700;padding:6px 0">PDFで保存できないときは</summary>
+        <div class="hint" style="padding:6px 0 0">
+          <b>Safari（Mac）の場合</b><br>
+          ① 「印刷する」を押す　② 出てきた画面の<b>左下</b>にある「<b>PDF ▾</b>」を押す<br>
+          ③ 「<b>PDFとして保存</b>」をえらぶ　④ 保存先と名前を決めて「保存」<br>
+          ※ 「PDF ▾」が見あたらないときは、画面の下のほうを探してください。小さく出ています。<br>
+          ※ 画面が小さくて隠れているときは、印刷画面の右下の「<b>詳細を表示</b>」を押すと広がります。<br><br>
+          <b>Chrome（Mac・Windows）の場合</b><br>
+          ① 「印刷する」を押す　② 「<b>送信先</b>」を「<b>PDFに保存</b>」にえらび直す　③ 「保存」<br><br>
+          <b>どうしてもうまくいかないとき</b><br>
+          Chrome で同じURLを開いて印刷してください。Chromeのほうが分かりやすい場所に出ます。
+        </div>
+      </details>
     </div>
   </div>
 
@@ -763,8 +777,11 @@ table.nou td.lbl{text-align:center}
     <h2><span class="n">2</span>印刷する・PDFで残す</h2>
     <div class="body">
       <p style="margin-top:0"><b>紙に出すとき</b> … 「印刷する」を押して、プリンターをえらぶ。</p>
-      <p><b>PDFで残すとき</b> … 「印刷する」を押したあと、印刷画面の「<b>送信先</b>」または「<b>PDF</b>」から
-        <b>「PDFに保存」</b>をえらぶ。</p>
+      <p><b>PDFで残すとき</b><br>
+        ・<b>Safari（Mac）</b>… 印刷画面の<b>左下の「PDF ▾」</b>→「<b>PDFとして保存</b>」<br>
+        　「PDF ▾」が見えないときは、印刷画面の右下の「<b>詳細を表示</b>」を押すと広がります。<br>
+        ・<b>Chrome</b>… 「<b>送信先</b>」を「<b>PDFに保存</b>」にえらび直す<br>
+        うまくいかないときは、Chromeで同じURLを開いて印刷してください。</p>
       <p style="margin-bottom:0">「<b>出した納品書に保存する</b>」を押しておくと、②のタブからいつでも同じものを再印刷できます。</p>
     </div>
   </div>
@@ -892,7 +909,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-l';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-m';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -2984,8 +3001,20 @@ function resetData(){
 }
 
 /* ====================== 起動 ====================== */
+/* 使っているブラウザに合わせて、PDF保存の場所を書き分ける */
+function renderPdfHelp(){
+  var el=document.getElementById('pdfHelp'); if(!el) return;
+  var ua=navigator.userAgent;
+  var isSafari = /Safari/.test(ua) && !/Chrome|Chromium|Edg|OPR/.test(ua);
+  el.innerHTML = isSafari
+    ? '※ 紙に出さずPDFにするには、印刷画面の<b>左下の「PDF ▾」</b>を押して<b>「PDFとして保存」</b>をえらびます。'+
+      '<br>　見あたらないときは、下の「PDFで保存できないときは」を開いてください。'
+    : '※ 印刷画面で「<b>送信先</b>」を「<b>PDFに保存</b>」にすると、紙に出さずPDFファイルが作れます。';
+}
+
 function boot(){
   var v=document.getElementById('verNow'); if(v) v.textContent=APPVER;
+  renderPdfHelp();
   document.getElementById('headCo').textContent=S.self.co;
   var today=new Date(); today.setMinutes(today.getMinutes()-today.getTimezoneOffset());
   document.getElementById('inDate').value=today.toISOString().slice(0,10);
