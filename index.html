@@ -265,6 +265,9 @@ table.nou td.lbl{text-align:center}
 <!-- ============ ① 納品書をつくる ============ -->
 <section id="page-create" class="page on">
 
+  <div id="editBar" style="display:none;background:#ede7f6;border:2px solid #9575cd;color:#4527a0;
+       border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:17px"></div>
+
   <div id="setupBox" class="warnbox" style="display:none;margin-bottom:20px;padding:20px 24px">
     <div style="font-size:20px;font-weight:700;color:#e65100;margin-bottom:10px">まず、台帳を入れてください</div>
     <p style="margin:0 0 14px">取引先や商品がまだ入っていません。受け取った<b>台帳ファイル</b>を読み込むと、すぐ使えるようになります。</p>
@@ -818,6 +821,11 @@ table.nou td.lbl{text-align:center}
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
             そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
+          <tr><td>出した納品書・請求書を直したい</td><td>「② 出した書類」で、その行の<b>「直す」</b>を押してください。<br>
+            作ったときの中身（取引先・お届け先・商品・数量・備考・書き添えることば）がそのまま戻ってきます。<br>
+            直したら「<b>出した書類に保存する</b>」を押します。<b>同じ伝票番号のまま差し替わります</b>（番号は進みません）。<br>
+            直した内容は、<b>合計請求書の集計にもそのまま反映されます。</b><br>
+            やめたいときは、紫の帯の「やめる」を押してください。もとの書類はそのまま残ります。</td></tr>
           <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td>「4 日付と番号」の「書類の種類」で<b>合計請求書</b>をえらびます。<br>
             ① 取引先をえらぶ → ② 対象の月をえらぶ → その月に出した納品書・請求書が一覧に出ます。<br>
             入れたくないものはチェックを外せます。日付・伝票番号・金額・消費税・摘要（お届け先）・合計が、そのまま表に並びます。<br>
@@ -874,7 +882,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-j';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-k';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1982,10 +1990,15 @@ function saveHistory(){
     var mc=matomeCalc();
     if(!mc.rows.length){ flash('printMsg','まとめる請求書がえらばれていません。',false); return; }
     var pp=getPartner();
-    S.history.unshift({id:'h'+Date.now(), kind:'mt', kindName:'合計請求書',
+    var mtRec={id:'h'+Date.now(), kind:'mt', kindName:'合計請求書',
       no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
-      partner:pp.name, partnerId:pp.id, sub:'', rate:0, mixed:false,
-      subAmount:mc.sub, tax:mc.tax, taxRate:10, total:mc.total, html:sheetHTML()});
+      partner:pp.name, partnerId:pp.id, sub:'', subId:'', rate:0, mixed:false,
+      subAmount:mc.sub, tax:mc.tax, taxRate:10, total:mc.total, html:sheetHTML(),
+      notes:document.getElementById('txtNotes').value,
+      mtMonth:(document.getElementById('mtMonth')||{}).value||'',
+      mtIds:matomeRows().filter(function(h){return mtPick[h.id];}).map(function(h){return h.id;})};
+    if(editingId){ replaceHistory(mtRec); return; }
+    S.history.unshift(mtRec);
     bumpSeq(); save(); flash('printMsg','「出した書類」に保存しました。番号を次に進めました。',true);
     document.getElementById('inNo').value = nextNo(); renderSheet(); return;
   }
@@ -1994,17 +2007,111 @@ function saveHistory(){
   S.history.unshift({
     id:'h'+Date.now(), no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
     kind:docKind(), kindName:kindName(),
-    partner:p.name, partnerId:p.id, sub:s?s.name:'', rate:c.rate, mixed:c.mixed,
+    partner:p.name, partnerId:p.id, sub:s?s.name:'', subId:cur.subId||'', rate:c.rate, mixed:c.mixed,
     subAmount:c.subAmount, tax:c.tax, taxRate:c.taxRate, total:c.total, html:sheetHTML(),
+    /* あとで直せるように、作ったときの中身をそのまま残す */
+    lines:JSON.parse(JSON.stringify(cur.lines)),
+    notes:document.getElementById('txtNotes').value,
+    ov:{on:document.getElementById('chkRate').checked,
+        rate:document.getElementById('inRateOv').value,
+        why:document.getElementById('inRateWhy').value},
     ovFrom: isOv()? tableRate() : null,
     ovWhy:  isOv()? document.getElementById('inRateWhy').value.trim() : ''
   });
+  if(editingId){ replaceHistory(S.history.shift()); return; }
   bumpSeq(); save(); flash('printMsg','「出した書類」に保存しました。番号を次に進めました。',true);
   document.getElementById('inNo').value = nextNo();
   renderSheet();
 }
+
+/* ====================== 出した書類を直す ====================== */
+var editingId=null;
+/* 直しているものを、もとの場所に差し替える（番号は進めない） */
+function replaceHistory(rec){
+  var i=-1;
+  S.history.forEach(function(h,k){ if(h.id===editingId) i=k; });
+  if(i<0){ S.history.unshift(rec); }
+  else { rec.id=editingId; S.history[i]=rec; }
+  save(); endEdit();
+  flash('printMsg','No.'+esc(rec.no)+' を差し替えました。番号は変わっていません。',true);
+  renderHistory();
+}
+function editHistory(id){
+  var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
+  if(h.kind!=='mt' && !h.lines){
+    alert('この書類は古い形式で保存されているため、直せません。\n\n'+
+      'お手数ですが、削除してから作り直してください。\n'+
+      '（このあと保存したものは、いつでも直せるようになります）');
+    return;
+  }
+  if(!confirm('No.'+h.no+'（'+h.kindName+'）を直します。\n\n'+
+    'いま「納品書・請求書をつくる」の画面に入れている内容は消えます。\nよろしいですか？')) return;
+
+  editingId=id;
+  showPage('create');
+  document.getElementById('inKind').value=h.kind; onKind();
+  document.getElementById('inDate').value=h.date||'';
+  document.getElementById('inNo').value=h.no||'';
+  /* 取引先とお届け先 */
+  var pid=h.partnerId;
+  if(!pid){ var f=S.partners.filter(function(p){return p.name===h.partner;})[0]; if(f) pid=f.id; }
+  document.getElementById('selPartner').value=pid||''; onPartner();
+  if(h.subId){ var ss=document.getElementById('selSub'); if(ss){ ss.value=h.subId; onSub(); } }
+  document.getElementById('txtNotes').value=h.notes||'';
+
+  if(h.kind==='mt'){
+    if(h.mtMonth) document.getElementById('mtMonth').value=h.mtMonth;
+    mtPick={};
+    renderMatome();
+    if(h.mtIds){ matomeRows().forEach(function(r){ mtPick[r.id]= h.mtIds.indexOf(r.id)>=0; }); }
+    renderMatome();
+  } else {
+    cur.lines=JSON.parse(JSON.stringify(h.lines||[]));
+    if(h.ov){
+      document.getElementById('chkRate').checked=!!h.ov.on;
+      document.getElementById('inRateOv').value=h.ov.rate||'';
+      document.getElementById('inRateWhy').value=h.ov.why||'';
+      document.getElementById('rateOvBox').style.display=h.ov.on?'block':'none';
+    }
+  }
+  renderAll();
+  showEditBar(h);
+  window.scrollTo(0,0);
+}
+function showEditBar(h){
+  var b=document.getElementById('editBar');
+  b.style.display='block';
+  b.innerHTML='<b>✎ 「'+esc(h.kindName)+' No.'+esc(h.no)+'」を直しています。</b>'+
+    '<span style="font-weight:400">　直したら「出した書類に保存する」を押してください。'+
+    '同じ番号のまま差し替わります。</span>'+
+    '<button class="btn sub" style="margin-left:12px" onclick="cancelEdit()">やめる</button>';
+}
+function endEdit(){
+  editingId=null;
+  document.getElementById('editBar').style.display='none';
+  document.getElementById('inNo').value=nextNo();
+}
+function cancelEdit(){
+  if(!confirm('直すのをやめます。ここまでの直しは反映されません。よろしいですか？')) return;
+  endEdit(); clearAllSilent();
+  flash('printMsg','直すのをやめました。もとの書類はそのままです。',true);
+}
+function clearAllSilent(){
+  cur={partnerId:'',subId:'',lines:[]}; pick={group:''}; mtPick={};
+  document.getElementById('selPartner').value=''; document.getElementById('subWrap').style.display='none';
+  document.getElementById('txtNotes').value=''; document.getElementById('txtPaste').value='';
+  document.getElementById('inFind').value='';
+  document.getElementById('chkRate').checked=false; document.getElementById('inRateOv').value='';
+  document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
+  document.getElementById('rateInfo').style.display='none';
+  renderAll();
+}
 function clearAll(){
-  if(!confirm('入力した内容を消して、はじめからやり直しますか？')) return;
+  if(editingId){
+    if(!confirm('いま書類を直している最中です。\nやめて、はじめからやり直しますか？')) return;
+    endEdit();
+  }
+  else if(!confirm('入力した内容を消して、はじめからやり直しますか？')) return;
   cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
   document.getElementById('selPartner').value=''; document.getElementById('subWrap').style.display='none';
   document.getElementById('txtNotes').value=''; document.getElementById('txtPaste').value='';
@@ -2059,7 +2166,8 @@ function renderHistory(){
              : h.rate+'％');
       return '<tr><td><b>'+esc(h.kindName||'納品書')+'</b></td><td>'+esc(h.no)+'</td><td>'+esc(h.date)+'</td><td>'+esc(h.partner)+'</td><td>'+esc(h.sub||'―')+
              '</td><td class="num">'+rt+'</td><td class="num">'+yen(h.total)+' 円</td>'+
-             '<td><button class="btn sm" onclick="reprint(\''+h.id+'\')">もう一度印刷</button> '+
+             '<td><button class="btn sm" onclick="editHistory(\''+h.id+'\')">直す</button> '+
+             '<button class="btn sm sub" onclick="reprint(\''+h.id+'\')">もう一度印刷</button> '+
              '<button class="btn danger sm" onclick="delHist(\''+h.id+'\')">削除</button></td></tr>';
     }).join('')+'</tbody></table>';
 }
@@ -2068,7 +2176,10 @@ function reprint(id){
   document.getElementById('printArea').innerHTML=h.html; window.print(); renderSheet();
 }
 function delHist(id){
-  if(!confirm('この納品書の記録を消しますか？')) return;
+  var h=S.history.filter(function(x){return x.id===id;})[0];
+  var w=(h&&h.kind!=='mt')?'\n\n※ 消すと、合計請求書の集計からも外れます。':'';
+  if(!confirm('「'+(h?h.kindName+' No.'+h.no:'この記録')+'」を消しますか？'+w)) return;
+  if(editingId===id) endEdit();
   S.history=S.history.filter(function(x){return x.id!==id;}); save(); renderHistory();
 }
 
