@@ -192,7 +192,7 @@ table.nou .c-amt{width:30mm;text-align:right}
 .sheet .billtotal>div{display:table-cell;border:1px solid #000;padding:1.5mm 3mm;vertical-align:middle}
 .sheet .billtotal .lb{width:32mm;text-align:center;font-size:12pt}
 .sheet .billtotal .vl{width:56mm;text-align:center;font-size:19pt;font-weight:700;letter-spacing:.05em}
-.sheet .bank{margin-top:7mm}
+.sheet .bank{margin-top:5mm}
 .sheet .bank .cap{font-size:10.5pt;margin-bottom:1mm;padding-left:2mm}
 .sheet table.bankt{border-collapse:collapse;font-size:11.5pt}
 .sheet table.bankt td{border:1px solid #000;padding:1.2mm 5mm;text-align:center;white-space:nowrap}
@@ -204,7 +204,7 @@ table.nou td.lbl{text-align:center}
 @media print{
   @page{size:A4 portrait;margin:11mm}
   body{background:#fff}
-  .head,.tabs,main,#imgPanel,#storeWarn{display:none !important}
+  .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn{display:none !important}
   body.withimg{padding-left:0 !important}
   #printArea{display:block !important}
   .sheet{width:auto;padding:0}
@@ -435,6 +435,7 @@ table.nou td.lbl{text-align:center}
   <div class="step">
     <h2><span class="n">✓</span>できあがりの確認</h2>
     <div class="body" style="background:#eef2f7">
+      <div id="fitMsg" style="display:none;margin-bottom:12px"></div>
       <div id="previewBox" style="background:#fff;border:1px solid var(--line);padding:10px;overflow:auto"></div>
     </div>
   </div>
@@ -763,6 +764,10 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>A4の1枚に収まるか心配</td><td><b>用紙はA4（たて）です。</b>1枚に収まらないときは、
+            「できあがりの確認」の上に<b>オレンジの帯</b>が出ます。印刷を押したときにも一度止まります。<br>
+            収まる目安は、<b>納品書で20件ほど、請求書で13件ほど</b>です（請求書は下に振込先が入るぶん少なくなります）。<br>
+            帯が出たら、商品を減らすか、「書き添えることば」の空の行を減らしてください。</td></tr>
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
             そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
@@ -818,7 +823,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-y';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-b';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1667,7 +1672,7 @@ function sheetHTML(){
   notes.forEach(function(x){
     body+='<tr><td class="c-no"></td><td class="c-name">'+esc(x)+'</td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
   });
-  var filler=Math.max(0, (isSei()?15:18)-(c.rows.length+notes.length));
+  var filler=Math.max(0, (isSei()?13:18)-(c.rows.length+notes.length));
   for(var i=0;i<filler;i++) body+='<tr><td class="c-no"></td><td class="c-name"></td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
 
   var sei=isSei();
@@ -1717,10 +1722,38 @@ function sheetHTML(){
     bank+
     '</div>';
 }
+/* A4（縦・余白11mm）で印刷できる高さは 275mm。
+   画面の見本は幅190mm・上下に4mmずつ余白があるので、その分を引いて見積もる。
+   印刷時は幅が188mmと少し狭く、文字の折り返しでわずかに伸びることがあるので、
+   268mm を超えたら「2枚になるかもしれない」と知らせる。 */
+var PAGE_MM=275, WARN_MM=268;
+function sheetHeightMm(){
+  var el=document.querySelector('#previewBox .sheet');
+  if(!el) return 0;
+  var px=el.getBoundingClientRect().height;
+  return Math.round((px/(96/25.4) - 8)*10)/10;   /* 上下の余白4mm×2を引く */
+}
 function renderSheet(){
-  var h = getPartner()? sheetHTML() : '<div class="empty">取引先をえらぶと、ここに納品書が出ます。</div>';
+  var h = getPartner()? sheetHTML() : '<div class="empty">取引先をえらぶと、ここに書類が出ます。</div>';
   document.getElementById('printArea').innerHTML = getPartner()? h : '';
   document.getElementById('previewBox').innerHTML = h;
+  checkPageFit();
+}
+function checkPageFit(){
+  var box=document.getElementById('fitMsg');
+  if(!box) return;
+  if(!getPartner()){ box.style.display='none'; return; }
+  var mm=sheetHeightMm();
+  if(mm>WARN_MM){
+    box.className='warnbox';
+    box.style.display='block';
+    box.innerHTML='<b>⚠ A4の1枚に収まらないかもしれません。</b>'+
+      '（いまの高さ 約'+mm+'mm ／ A4に入るのは 275mm まで）<br>'+
+      '<span style="font-weight:400">商品を減らすか、「書き添えることば」の空の行を減らしてください。'+
+      'このまま印刷すると2枚になることがあります。</span>';
+  } else {
+    box.style.display='none';
+  }
 }
 
 /* ====================== 印刷・保存・やり直し ====================== */
@@ -1738,7 +1771,14 @@ function doPrint(){
   if(z.length){
     if(!confirm('上代が 0円 の行が '+z.length+' 行あります。\nこのままだと金額が 0円 で印刷されます。\n\n続けますか？')) return;
   }
-  renderSheet(); window.print();
+  renderSheet();
+  var mm=sheetHeightMm();
+  if(mm>WARN_MM){
+    if(!confirm('⚠ A4の1枚に収まらないかもしれません。\n'+
+      '　いまの高さ：約'+mm+'mm（A4に入るのは275mmまで）\n\n'+
+      '2枚に分かれて印刷されることがあります。\nこのまま印刷しますか？')) return;
+  }
+  window.print();
 }
 function saveHistory(){
   if(!getPartner()||!cur.lines.length){ flash('printMsg','取引先と商品が入っていないと保存できません。',false); return; }
