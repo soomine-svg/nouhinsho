@@ -119,6 +119,7 @@ textarea.memoin:focus{outline:3px solid #90c2f5;border-color:var(--accent)}
 .parts{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
 .parts select,.parts input[type=text]{font-size:15px;padding:6px 8px;border:2px solid var(--line);border-radius:7px}
 .parts .pnum{width:62px;text-align:right}
+input.numin{font-variant-numeric:tabular-nums}
 .parts .plab{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:700;color:#41526a;
   border:2px solid var(--line);border-radius:7px;padding:5px 8px;background:#fff;cursor:pointer}
 .parts .plab input{width:18px;height:18px;margin:0;cursor:pointer}
@@ -305,7 +306,7 @@ table.nou td.lbl{text-align:center}
         <label class="chk"><input type="checkbox" id="chkRate" onchange="onRateOv()"> この納品書だけ、卸率をいつもと変える</label>
         <div id="rateOvBox" class="warnbox" style="display:none">
           <div class="row" style="margin-bottom:0">
-            <div><label>この納品書の卸率（％）</label><input id="inRateOv" type="number" min="0" max="100" style="width:140px" onchange="renderAll()"></div>
+            <div><label>この納品書の卸率（％）</label><input id="inRateOv" type="text" inputmode="numeric" class="numin" min="0" max="100" style="width:140px" onchange="renderAll()"></div>
             <div style="flex:1;min-width:260px"><label>変えた理由（記録に残ります）</label><input id="inRateWhy" type="text" style="width:100%" placeholder="例）今回のみ特別対応"></div>
           </div>
           <div class="hint" style="margin:10px 0 0">※ 商品ごとに卸率を変えたいときは、下の明細表の「卸率」らんを直してください。</div>
@@ -353,7 +354,7 @@ table.nou td.lbl{text-align:center}
           <div style="border-top:2px dashed var(--line);margin:4px 0 12px;padding-top:12px">
             <h4 style="margin-bottom:8px">これから入れるものの 数量と備考</h4>
             <div class="row" style="margin-bottom:0">
-              <div><label for="inQty">数量</label><input id="inQty" type="number" value="1" min="1" style="width:110px"></div>
+              <div><label for="inQty">数量</label><input id="inQty" type="text" inputmode="numeric" class="numin" value="1" min="1" style="width:110px"></div>
               <div style="flex:1;min-width:240px">
                 <label for="inMemo">備考（なくてもOK・Enterで改行）</label>
                 <textarea id="inMemo" class="memoin" rows="2" style="width:100%" placeholder="例）お届け先のお名前&#10;2行目はEnterで"></textarea>
@@ -381,8 +382,8 @@ table.nou td.lbl{text-align:center}
       <div id="pane-hand" class="pane">
         <div class="row">
           <div style="flex:1;min-width:220px"><label for="hName">品名</label><input id="hName" type="text" style="width:100%"></div>
-          <div><label for="hPrice">上代（税抜）</label><input id="hPrice" type="number" value="0" min="0" style="width:150px"></div>
-          <div><label for="hQty">数量</label><input id="hQty" type="number" value="1" min="1" style="width:100px"></div>
+          <div><label for="hPrice">上代（税抜）</label><input id="hPrice" type="text" inputmode="numeric" class="numin" value="0" min="0" style="width:150px"></div>
+          <div><label for="hQty">数量</label><input id="hQty" type="text" inputmode="numeric" class="numin" value="1" min="1" style="width:100px"></div>
           <div style="flex:1;min-width:200px"><label for="hMemo">備考（Enterで改行）</label><textarea id="hMemo" class="memoin" rows="2" style="width:100%"></textarea></div>
           <div><button class="btn" onclick="addByHand()">明細に追加する</button></div>
         </div>
@@ -543,7 +544,7 @@ table.nou td.lbl{text-align:center}
     <div class="body">
       <div class="row">
         <div style="flex:1;min-width:200px"><label>取引先名</label><input id="pName" type="text" style="width:100%"></div>
-        <div><label>卸率(％)</label><input id="pRate" type="number" value="35" style="width:110px"></div>
+        <div><label>卸率(％)</label><input id="pRate" type="text" inputmode="numeric" class="numin" value="35" style="width:110px"></div>
         <div><label>締日</label><input id="pClose" type="text" style="width:120px" placeholder="月末"></div>
         <div><label>入金日</label><input id="pPay" type="text" style="width:130px" placeholder="翌月末"></div>
         <div style="flex:1;min-width:180px"><label>覚え書き</label><input id="pMemo" type="text" style="width:100%"></div>
@@ -560,7 +561,7 @@ table.nou td.lbl{text-align:center}
       <div class="row">
         <div style="flex:1;min-width:260px"><label>どの取引先の分か</label><select id="sPartner" style="width:100%" onchange="renderSubs()"></select></div>
         <div style="flex:1;min-width:200px"><label>お届け先名</label><input id="sName" type="text" style="width:100%"></div>
-        <div><label>卸率(％)　空欄＝基本</label><input id="sRate" type="number" style="width:150px" placeholder="基本"></div>
+        <div><label>卸率(％)　空欄＝基本</label><input id="sRate" type="text" inputmode="numeric" class="numin" style="width:150px" placeholder="基本"></div>
         <div><button class="btn" onclick="addSub()">お届け先を足す</button></div>
       </div>
       <div id="sTable"></div>
@@ -589,7 +590,7 @@ table.nou td.lbl{text-align:center}
           <div style="flex:0 0 130px"><label for="gColor">色</label>
             <select id="gColor" style="width:100%" onchange="gPrev()"></select></div>
           <div style="flex:0 0 110px"><label for="gNum">数字</label>
-            <input id="gNum" type="text" style="width:100%" placeholder="8" oninput="gPrev()"></div>
+            <input id="gNum" type="text" inputmode="numeric" class="numin" style="width:100%" placeholder="8" oninput="gPrev()"></div>
           <div style="flex:0 0 100px"><label for="gUnitN">単位</label>
             <select id="gUnitN" style="width:100%" onchange="gPrev()"><option>P</option><option>g</option><option value="">なし</option></select></div>
           <div style="flex:0 0 120px"><label>&nbsp;</label>
@@ -606,7 +607,7 @@ table.nou td.lbl{text-align:center}
       <div id="gPlain">
         <div class="row">
           <div style="flex:0 0 130px"><label for="gSize">大きさ・内容量</label>
-            <input id="gSize" type="text" style="width:100%" placeholder="200" oninput="gPrev()"></div>
+            <input id="gSize" type="text" inputmode="numeric" class="numin" style="width:100%" placeholder="200" oninput="gPrev()"></div>
           <div style="flex:0 0 130px"><label for="gUnit">単位</label>
             <select id="gUnit" style="width:100%" onchange="onGUnit()">
               <option>g</option><option>P</option><option value="">なし</option><option value="__">その他</option>
@@ -617,7 +618,7 @@ table.nou td.lbl{text-align:center}
       </div>
 
       <div class="row">
-        <div><label for="gPrice">上代（税抜）</label><input id="gPrice" type="number" value="0" style="width:170px"></div>
+        <div><label for="gPrice">上代（税抜）</label><input id="gPrice" type="text" inputmode="numeric" class="numin" value="0" style="width:170px"></div>
         <div><button class="btn" onclick="addProduct()">商品を足す</button></div>
       </div>
 
@@ -840,6 +841,9 @@ table.nou td.lbl{text-align:center}
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
             そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
+          <tr><td>数字を全角で打ってしまう</td><td><b>そのままで大丈夫です。</b>数量・上代・卸率・大きさなどの欄は、
+            <b>全角で打っても自動で半角に直ります</b>（「１２３」→「123」）。<br>
+            かな入力のままでも入ります。カンマ（1,000 の「,」）や空白も、自動で取り除きます。</td></tr>
           <tr><td>伝票番号はどう決まるの？</td><td><b>取引先ごとに、1から順に自動で付きます。</b><br>
             「9-1」の<b>9は月</b>です。「伝票番号の月」でえらべます（請求日とは別に決められます）。<br>
             <b>納品書と請求書は番号が続きます</b>（9-1が納品書、9-2が請求書、のように）。取引先が変わればまた1から始まります。<br>
@@ -911,7 +915,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-p';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-q';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1435,6 +1439,26 @@ function toggleCat(name){
   if(el) el.classList.toggle('closed', !!UI.cats[name]);
 }
 
+/* 数字の欄は、全角で打たれても半角に直す。
+   type="number" のままだと全角がそもそも入らず、空のままになるため
+   type="text" にして、打つそばから直している。 */
+function hanNum(v){
+  return String(v==null?'':v)
+    .replace(/[０-９]/g, function(c){ return String.fromCharCode(c.charCodeAt(0)-0xFEE0); })
+    .replace(/[．]/g,'.').replace(/[，,]/g,'')
+    .replace(/[ \u3000]/g,'');
+}
+document.addEventListener('input', function(e){
+  var el=e.target;
+  if(!el || !el.classList || !el.classList.contains('numin')) return;
+  var v=el.value, w=hanNum(v);
+  if(w!==v){
+    var pos=el.selectionStart;
+    el.value=w;
+    try{ el.setSelectionRange(pos,pos); }catch(_){}
+  }
+}, true);
+
 /* ====================== 画面きりかえ ====================== */
 function showPage(p){
   ['create','history','master','help'].forEach(function(x){
@@ -1725,9 +1749,9 @@ function renderLines(){
        '<td>'+esc(r.name)+
          (r.miss?'<br><span style="color:#c62828;font-size:13px">※台帳に無い商品です。上代を入れてください</span>':'')+
          (r.qchk?'<br><span style="color:#e65100;font-size:13px">※数量が読み取れませんでした。発注書を見て数量を入れてください</span>':'')+'</td>'+
-       '<td class="num"><input type="number" min="1" value="'+r.qty+'" style="width:80px;text-align:right" onchange="setQty('+i+',this.value)"></td>'+
-       '<td class="num"><input type="number" min="0" value="'+r.price+'" style="width:125px;text-align:right" onchange="setPrice('+i+',this.value)"></td>'+
-       '<td class="num'+(r.ownRate!=null?' ov':'')+'"><input type="number" min="0" max="100" value="'+(r.ownRate==null?'':r.ownRate)+'" placeholder="'+c.rate+'" style="width:85px;text-align:right" onchange="setRate('+i+',this.value)"></td>'+
+       '<td class="num"><input type="text" inputmode="numeric" class="numin" min="1" value="'+r.qty+'" style="width:80px;text-align:right" onchange="setQty('+i+',this.value)"></td>'+
+       '<td class="num"><input type="text" inputmode="numeric" class="numin" min="0" value="'+r.price+'" style="width:125px;text-align:right" onchange="setPrice('+i+',this.value)"></td>'+
+       '<td class="num'+(r.ownRate!=null?' ov':'')+'"><input type="text" inputmode="numeric" class="numin" min="0" max="100" value="'+(r.ownRate==null?'':r.ownRate)+'" placeholder="'+c.rate+'" style="width:85px;text-align:right" onchange="setRate('+i+',this.value)"></td>'+
        '<td class="num">'+yen(r.amount)+'</td>'+
        '<td><textarea class="memoin" rows="2" onchange="setMemo('+i+',this.value)" oninput="setMemo('+i+',this.value)">'+esc(r.memo)+'</textarea></td>'+
        '<td><button class="btn danger sm" onclick="delLine('+i+')">削除</button></td></tr>';
@@ -2323,7 +2347,7 @@ function renderPartners(){
       var need=!(Number(p.baseRate)>0);
       return '<tr class="'+(need?'needval':'')+'">'+
       '<td><input type="text" value="'+esc(p.name)+'" style="width:100%" onchange="upP(\''+p.id+'\',\'name\',this.value)"></td>'+
-      '<td class="num"><input type="number" value="'+p.baseRate+'" style="width:75px;text-align:right" onchange="upP(\''+p.id+'\',\'rate\',this.value)"></td>'+
+      '<td class="num"><input type="text" inputmode="numeric" class="numin" value="'+p.baseRate+'" style="width:75px;text-align:right" onchange="upP(\''+p.id+'\',\'rate\',this.value)"></td>'+
       '<td><input type="text" value="'+esc(p.close)+'" style="width:100px" onchange="upP(\''+p.id+'\',\'close\',this.value)"></td>'+
       '<td><input type="text" value="'+esc(p.pay)+'" style="width:110px" onchange="upP(\''+p.id+'\',\'pay\',this.value)"></td>'+
       '<td><input type="text" value="'+esc(p.inv)+'" style="width:150px" onchange="upP(\''+p.id+'\',\'inv\',this.value)"></td>'+
@@ -2374,7 +2398,7 @@ function renderSubs(){
     '<table class="grid"><thead><tr><th>お届け先名</th><th class="num">卸率(％)</th><th></th></tr></thead><tbody>'+
     p.subs.map(function(s){
       return '<tr><td><input type="text" value="'+esc(s.name)+'" style="width:100%" onchange="upS(\''+p.id+'\',\''+s.id+'\',\'name\',this.value)"></td>'+
-      '<td class="num"><input type="number" value="'+(s.rate==null?'':s.rate)+'" placeholder="基本" style="width:100px;text-align:right" onchange="upS(\''+p.id+'\',\''+s.id+'\',\'rate\',this.value)"></td>'+
+      '<td class="num"><input type="text" inputmode="numeric" class="numin" value="'+(s.rate==null?'':s.rate)+'" placeholder="基本" style="width:100px;text-align:right" onchange="upS(\''+p.id+'\',\''+s.id+'\',\'rate\',this.value)"></td>'+
       '<td><button class="btn danger sm" onclick="delS(\''+p.id+'\',\''+s.id+'\')">削除</button></td></tr>';
     }).join('')+'</tbody></table>';
 }
@@ -2503,7 +2527,7 @@ function renderProducts(){
           '<td>'+catSelectHtml(g)+'</td>'+
           '<td><input type="text" value="'+esc(g.group)+'" style="width:100%" onchange="upG(\''+g.id+'\',\'group\',this.value)"></td>'+
           '<td>'+specCellHtml(g)+'</td>'+
-          '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
+          '<td class="num"><input type="text" inputmode="numeric" class="numin" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
           '<td style="color:var(--sub)">'+esc(pname(g))+
             (dupN>1?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ 同じ品名が '+dupN+' 件あります</span>':'')+
             (need?'<br><span style="color:#e65100;font-size:13px;font-weight:700">※上代を入れてください</span>':'')+'</td>'+
@@ -2562,7 +2586,7 @@ function specCellHtml(g){
     var colors=COLORS.slice();
     return '<div class="parts">'+
       '<select title="色" '+ch('color')+'>'+optList(colors, g.color||'', {'':'色なし'})+'</select>'+
-      '<input type="text" class="pnum" title="数字" value="'+esc(g.num||'')+'" placeholder="8" '+ch('num')+'>'+
+      '<input type="text" inputmode="numeric" class="pnum numin" title="数字" value="'+esc(g.num||'')+'" placeholder="8" '+ch('num')+'>'+
       '<select title="単位" '+ch('unit')+'>'+optList(['P','g',''], g.unit||'', {'':'単位なし'})+'</select>'+
       '<label class="plab" title="追加"><input type="checkbox"'+(g.extra?' checked':'')+
         ' onchange="upPart(\''+id+'\',\'extra\',this.checked)">追加</label>'+
@@ -2574,7 +2598,7 @@ function specCellHtml(g){
     return '<input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+id+'\',\'spec\',this.value)">';
   }
   return '<div class="parts">'+
-    '<input type="text" class="pnum" title="大きさ" value="'+esc(g.size||'')+'" placeholder="200" '+ch('size')+'>'+
+    '<input type="text" inputmode="numeric" class="pnum numin" title="大きさ" value="'+esc(g.size||'')+'" placeholder="200" '+ch('size')+'>'+
     '<select title="単位" '+ch('unit')+'>'+optList(['g','P','ml',''], g.unit||'', {'':'単位なし'})+
       '<option value="__">その他…</option></select>'+
   '</div>';
