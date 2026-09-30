@@ -255,7 +255,7 @@ table.nou td.lbl{text-align:center}
 </div>
 
 <div class="tabs">
-  <button id="tabCreate"  class="on" onclick="showPage('create')">① 納品書・請求書をつくる</button>
+  <button id="tabCreate"  class="on" onclick="showPage('create')">① 納品書をつくる</button>
   <button id="tabHistory"           onclick="showPage('history')">② 出した書類</button>
   <button id="tabMaster"            onclick="showPage('master')">③ 設定（取引先・商品）</button>
   <button id="tabHelp"              onclick="showPage('help')">④ 使い方</button>
@@ -456,7 +456,6 @@ table.nou td.lbl{text-align:center}
           <label for="inKind">書類の種類</label>
           <select id="inKind" class="big" style="width:100%" onchange="onKind()">
             <option value="nou">納品書</option>
-            <option value="sei">請求書</option>
             <option value="mt">合計請求書（1か月分をまとめる）</option>
           </select>
         </div>
@@ -846,7 +845,7 @@ table.nou td.lbl{text-align:center}
             かな入力のままでも入ります。カンマ（1,000 の「,」）や空白も、自動で取り除きます。</td></tr>
           <tr><td>伝票番号はどう決まるの？</td><td><b>取引先ごとに、1から順に自動で付きます。</b><br>
             「9-1」の<b>9は月</b>です。「伝票番号の月」でえらべます（請求日とは別に決められます）。<br>
-            <b>納品書と請求書は番号が続きます</b>（9-1が納品書、9-2が請求書、のように）。取引先が変わればまた1から始まります。<br>
+            <b>請求書は、もとの納品書と同じ番号になります</b>（納品書 9-1 → 請求書 9-1）。取引先が変わればまた1から始まります。<br>
             合計請求書だけ別の通し番号（NO1、NO2…）で、これも取引先ごとです。<br>
             番号は<b>保存済みの書類から毎回いちばん大きい番号を探して次を出す</b>ので、消しても飛びません。手で直せば、その次から続きます。</td></tr>
           <tr><td>出した納品書・請求書を消したい</td><td>「② 出した書類」で、その行の<b>「削除」</b>を押してください。<br>
@@ -858,15 +857,19 @@ table.nou td.lbl{text-align:center}
             直した内容は、<b>合計請求書の集計にもそのまま反映されます。</b><br>
             やめたいときは、紫の帯の「やめる」を押してください。もとの書類はそのまま残ります。</td></tr>
           <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td><b>いつもの流れはこうです。</b><br>
-            ① 請求書をつくる　② 印刷する（PDFで保存する）　③ <b>「出した書類に保存する」を押す</b>　…これを月内くり返す<br>
+            ① 納品書をつくる　② 印刷する（PDFで保存する）　③ <b>「出した書類に保存する」を押す</b>　…これを月内くり返す<br>
             ④ 月末に「書類の種類」を<b>合計請求書</b>にする　⑤ 取引先をえらぶ　⑥ その月の分が一覧に出る<br><br>
             <b>⚠ ③を押していないものは出てきません。</b>印刷しただけでは保存されません。<br>
             何月分かは<b>請求日（納品日）</b>で決まります。月がずれているだけなら、<b>書類のある月に自動で合わせます。</b><br>
-            一覧に出たら、入れたくないものはチェックを外せます。</td></tr>
-          <tr><td>請求書をつくりたい</td><td>「4 日付と番号」の<b>「書類の種類」</b>で<b>請求書</b>をえらんでください。作り方は納品書とまったく同じです。<br>
+            一覧に出たら、入れたくないものはチェックを外せます。<br>
+            納品書から請求書を出してあるときは、<b>請求書のほうだけが並びます</b>（同じ番号を二重に数えません）。</td></tr>
+          <tr><td>請求書をつくりたい</td><td>先に納品書をつくって保存します。そのあと「② 出した書類」で、その納品書の行の<b>オレンジの「請求書」</b>を押してください。<br>
+            納品書の中身がそのまま入った請求書が出ます。<b>請求日</b>をたしかめて、「印刷する」→「出した書類に保存する」の順に押します。<br>
+            すでに請求書を出してある納品書は、ボタンが<b>「請求書を直す」</b>に変わります。<br>
+            ※ 請求書を出したあとで納品書を直しても、請求書は自動では変わりません。「請求書を直す」で同じように直してください。<br>
             請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
             振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
-            <b>伝票番号は納品書と請求書で続きになります</b>（9-1、9-2…）。合計請求書だけ別の通し番号です。</td></tr>
+            <b>請求書の番号は、もとの納品書と同じです。</b>合計請求書だけ別の通し番号です。</td></tr>
           <tr><td>書き添えることばを、商品の少し下に置きたい</td><td><b>改行がそのまま1行になります。</b>
             書き始める前に Enter を2回押せば、商品の2行下から始まります。<br>
             打つたびに、いちばん下の「できあがりの確認」がすぐ変わるので、<b>見ながら位置を決められます。</b></td></tr>
@@ -915,7 +918,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-q';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-r';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1522,7 +1525,7 @@ function onPartner(){
   document.getElementById('inRateWhy').value=''; document.getElementById('rateOvBox').style.display='none';
   var p = getPartner();
   var w = document.getElementById('subWrap');
-  if(!editingId){
+  if(!noLocked()){
     var ne=document.getElementById('inNo'); if(ne) ne.value=nextNo();
   }
   if(isMt()) setTimeout(renderMatome,0);
@@ -1887,8 +1890,9 @@ function matomeRows(){
   var p=getPartner(); if(!p) return [];
   var ym=(document.getElementById('mtMonth')||{}).value||'';
   /* 納品書も請求書も同じ伝票番号の列なので、両方まとめる（合計請求書そのものは除く） */
+  var done=invoicedIds();
   return S.history.filter(function(h){
-    return (h.kind==='sei'||h.kind==='nou') && sameP(h,p) && recPeriod(h)===ym;
+    return (h.kind==='sei'||(h.kind==='nou' && !done[h.id])) && sameP(h,p) && recPeriod(h)===ym;
   }).sort(function(a,b){
     var d=String(a.date).localeCompare(String(b.date));
     return d!==0 ? d : String(a.no).localeCompare(String(b.no), 'ja', {numeric:true});
@@ -1912,9 +1916,9 @@ function renderMatome(){
   }
   if(!rows.length){
     /* その取引先の保存済みが、どの月にあるかを調べる */
-    var p2=getPartner(), months={};
+    var p2=getPartner(), months={}, done2=invoicedIds();
     S.history.forEach(function(h){
-      if((h.kind==='sei'||h.kind==='nou') && sameP(h,p2)) months[recPeriod(h)]=(months[recPeriod(h)]||0)+1;
+      if((h.kind==='sei'||(h.kind==='nou' && !done2[h.id])) && sameP(h,p2)) months[recPeriod(h)]=(months[recPeriod(h)]||0)+1;
     });
     var keys=Object.keys(months).sort().reverse();
     /* 月がずれているだけなら、いちばん新しい月へ自動で合わせる（空の画面を見せない） */
@@ -2071,6 +2075,13 @@ function doPrint(){
 /* 印刷しただけでは合計請求書に出ないので、消えない案内を出す */
 function saveReminder(){
   if(editingId) return;
+  if(invFromId){
+    var e2=document.getElementById('printMsg');
+    e2.className='msg ng';
+    e2.innerHTML='印刷しました。<b>つづけて「出した書類に保存する」を押してください。</b><br>'+
+      '押さないと、この請求書は「② 出した書類」に残りません。';
+    return;
+  }
   var e=document.getElementById('printMsg');
   e.className='msg ng';
   e.innerHTML='印刷しました。<b>つづけて「出した書類に保存する」を押してください。</b><br>'+
@@ -2096,7 +2107,9 @@ function saveHistory(){
   }
   if(!cur.lines.length){ flash('printMsg','取引先と商品が入っていないと保存できません。',false); return; }
   var c=calc(), p=getPartner(), s=getSub();
+  var old=editingId? S.history.filter(function(x){return x.id===editingId;})[0] : null;
   S.history.unshift({
+    fromId: invFromId || (old&&old.fromId) || '',
     id:'h'+Date.now(), no:document.getElementById('inNo').value, date:document.getElementById('inDate').value,
     kind:docKind(), kindName:kindName(),
     partner:p.name, partnerId:p.id, sub:s?s.name:'', subId:cur.subId||'', rate:c.rate, mixed:c.mixed,
@@ -2112,6 +2125,12 @@ function saveHistory(){
     ovWhy:  isOv()? document.getElementById('inRateWhy').value.trim() : ''
   });
   if(editingId){ replaceHistory(S.history.shift()); return; }
+  if(invFromId){
+    var doneNo=S.history[0].no;
+    save(); endInvFrom(); clearAllSilent();
+    flash('printMsg','請求書 No.'+esc(doneNo)+' を「出した書類」に保存しました。納品書と同じ番号です。',true);
+    return;
+  }
   bumpSeq(); save(); flash('printMsg','「出した書類」に保存しました。番号を次に進めました。',true);
   document.getElementById('inNo').value = nextNo();
   renderSheet();
@@ -2138,11 +2157,18 @@ function editHistory(id){
     return;
   }
   if(!confirm('No.'+h.no+'（'+h.kindName+'）を直します。\n\n'+
-    'いま「納品書・請求書をつくる」の画面に入れている内容は消えます。\nよろしいですか？')) return;
+    'いま「納品書をつくる」の画面に入れている内容は消えます。\nよろしいですか？')) return;
 
+  if(invFromId) endInvFrom();
   editingId=id;
+  loadRecToForm(h, h.kind);
+  showEditBar(h);
+  window.scrollTo(0,0);
+}
+/* 保存してある書類の中身を「つくる」画面に戻す（直す／納品書から請求書をつくる で共通） */
+function loadRecToForm(h, kind){
   showPage('create');
-  document.getElementById('inKind').value=h.kind; onKind();
+  setKind(kind);
   document.getElementById('inDate').value=h.date||'';
   document.getElementById('inNo').value=h.no||'';
   var mm2=/^([0-9]+)-/.exec(String(h.no||''));
@@ -2154,7 +2180,7 @@ function editHistory(id){
   if(h.subId){ var ss=document.getElementById('selSub'); if(ss){ ss.value=h.subId; onSub(); } }
   document.getElementById('txtNotes').value=h.notes||'';
 
-  if(h.kind==='mt'){
+  if(kind==='mt'){
     if(h.mtMonth) document.getElementById('mtMonth').value=h.mtMonth;
     mtPick={};
     renderMatome();
@@ -2170,8 +2196,62 @@ function editHistory(id){
     }
   }
   renderAll();
-  showEditBar(h);
+}
+
+/* ====================== 納品書から請求書をつくる ======================
+   2026-10-01 本人指示：請求書は「② 出した書類」の納品書の行からつくる。
+   番号は納品書と同じ（9-3 の納品書 → 9-3 の請求書）。
+   請求書には fromId（もとの納品書の id）を残す。合計請求書では、請求書を出した納品書は数えない。 */
+var invFromId=null;
+function noLocked(){ return editingId||invFromId; }
+function invoicedIds(){
+  var m={};
+  S.history.forEach(function(h){ if(h.kind==='sei' && h.fromId) m[h.fromId]=h.id; });
+  return m;
+}
+function invoiceFrom(id){
+  var h=S.history.filter(function(x){return x.id===id;})[0]; if(!h) return;
+  var made=invoicedIds()[id];
+  if(made){ editHistory(made); return; }
+  if(!h.lines){
+    alert('この納品書は古い形式で保存されているため、ここから請求書をつくれません。\n\n'+
+      'お手数ですが、納品書を作り直してからお試しください。');
+    return;
+  }
+  if(!confirm('納品書 No.'+h.no+' の内容で、請求書をつくります。\n番号は納品書と同じ No.'+h.no+' になります。\n\n'+
+    'いま「納品書をつくる」の画面に入れている内容は消えます。\nよろしいですか？')) return;
+  if(editingId) endEdit();
+  invFromId=id;
+  loadRecToForm(h,'sei');
+  document.getElementById('inNo').value=h.no||'';
+  renderSheet();
+  var b=document.getElementById('editBar');
+  b.style.display='block';
+  b.innerHTML='<b>納品書 No.'+esc(h.no)+' の内容で、請求書をつくっています（番号は同じ No.'+esc(h.no)+'）。</b>'+
+    '<span style="font-weight:400">　請求日をたしかめて、「印刷する」→「出した書類に保存する」の順に押してください。</span>'+
+    '<button class="btn sub" style="margin-left:12px" onclick="cancelInvFrom()">やめる</button>';
   window.scrollTo(0,0);
+}
+function endInvFrom(){
+  invFromId=null;
+  document.getElementById('editBar').style.display='none';
+  setKind('nou');
+}
+function cancelInvFrom(){
+  if(!confirm('請求書をつくるのをやめます。よろしいですか？\n（もとの納品書はそのまま残ります）')) return;
+  endInvFrom(); clearAllSilent();
+  flash('printMsg','請求書をつくるのをやめました。納品書はそのままです。',true);
+}
+/* 「書類の種類」に請求書は出さない。請求書を直すとき・納品書からつくるときだけ一時的に足す。 */
+function setKind(k){
+  var e=document.getElementById('inKind'); if(!e) return;
+  var o=e.querySelector('option[value="sei"]');
+  if(k==='sei' && !o){
+    o=document.createElement('option'); o.value='sei'; o.textContent='請求書';
+    e.insertBefore(o, e.options[1]||null);
+  }
+  if(k!=='sei' && o) e.removeChild(o);
+  e.value=k; onKind();
 }
 function showEditBar(h){
   var b=document.getElementById('editBar');
@@ -2184,6 +2264,8 @@ function showEditBar(h){
 function endEdit(){
   editingId=null;
   document.getElementById('editBar').style.display='none';
+  /* 請求書を直し終えたら、画面を空にして納品書に戻す（請求書は「書類の種類」に無いため） */
+  if(isSei()){ setKind('nou'); clearAllSilent(); }
   document.getElementById('inNo').value=nextNo();
 }
 function cancelEdit(){
@@ -2205,6 +2287,10 @@ function clearAll(){
   if(editingId){
     if(!confirm('いま書類を直している最中です。\nやめて、はじめからやり直しますか？')) return;
     endEdit();
+  }
+  else if(invFromId){
+    if(!confirm('請求書をつくっている最中です。\nやめて、はじめからやり直しますか？')) return;
+    endInvFrom();
   }
   else if(!confirm('入力した内容を消して、はじめからやり直しますか？')) return;
   cur={partnerId:'',subId:'',lines:[]}; pick={group:''};
@@ -2242,7 +2328,7 @@ function fillMonthSelect(){
     e.innerHTML=h;
   }
 }
-function onMonthChange(){ if(!editingId) document.getElementById('inNo').value=nextNo(); renderSheet(); }
+function onMonthChange(){ if(!noLocked()) document.getElementById('inNo').value=nextNo(); renderSheet(); }
 /* 「何月分の書類か」は【請求日・納品日】で決める（2026-10-01 本人指示）。
    伝票番号の月（9-3 の 9）は番号の付け方だけに使い、集計には使わない。 */
 function docPeriod(){
@@ -2273,9 +2359,15 @@ function sameP(h,p){ return h.partnerId===p.id || h.partner===p.name; }
 function bumpSeq(){ /* 番号は履歴から計算するので、数え上げのメモは使わない */ }
 function onKind(){
   var sei=isSei(), mt=isMt();
+  /* 請求書づくりの途中で種類を変えたら、請求書づくりをやめて、請求書の選択肢も片づける */
+  if(!sei && !editingId){
+    if(invFromId){ invFromId=null; document.getElementById('editBar').style.display='none'; }
+    var so=document.getElementById('inKind').querySelector('option[value="sei"]');
+    if(so) so.parentNode.removeChild(so);
+  }
   document.getElementById('lblDate').textContent = mt?'発行日':(sei?'請求日':'納品日');
   document.getElementById('lblNo').textContent   = mt?'合計請求書No.':(sei?'請求書No.':'納品書No.');
-  document.getElementById('inNo').value = nextNo();
+  if(!invFromId) document.getElementById('inNo').value = nextNo();
   /* 合計請求書は、商品を1つずつ入れるのではなく「その月に出した請求書」をまとめる */
   var mw=document.getElementById('moWrap'); if(mw) mw.style.display = mt?'none':'flex';
   var si=document.getElementById('stepItems'), sm=document.getElementById('stepMatome');
@@ -2286,23 +2378,26 @@ function onKind(){
 function onDateChange(){
   var d=document.getElementById('inDate').value;
   var e=document.getElementById('inMonth');
-  if(d && e && !editingId) e.value=String(parseInt(d.slice(5,7),10));
-  if(!editingId) document.getElementById('inNo').value = nextNo();
+  if(d && e && !noLocked()) e.value=String(parseInt(d.slice(5,7),10));
+  if(!noLocked()) document.getElementById('inNo').value = nextNo();
   renderSheet();
 }
 
 function renderHistory(){
   var w=document.getElementById('histWrap');
   if(!S.history.length){ w.innerHTML='<div class="empty">まだ保存された納品書はありません。</div>'; return; }
+  var done=invoicedIds();
   w.innerHTML='<table class="grid"><thead><tr><th style="width:90px">種類</th><th>No.</th><th>日付</th><th>取引先</th><th>お届け先</th>'+
     '<th class="num">卸率</th><th class="num">合計</th><th></th></tr></thead><tbody>'+
     S.history.map(function(h){
+      var inv = h.kind!=='nou' ? ''
+              : '<button class="btn sm" style="background:#ef6c00" onclick="invoiceFrom(\''+h.id+'\')">'+(done[h.id]?'請求書を直す':'請求書')+'</button> ';
       var rt = h.mixed ? '商品ごと'
              : (h.ovFrom!=null ? '<span style="color:#e65100;font-weight:700">'+h.rate+'％</span><br><span style="font-size:12px;color:#e65100">いつもは'+h.ovFrom+'％'+(h.ovWhy?'<br>'+esc(h.ovWhy):'')+'</span>'
              : h.rate+'％');
       return '<tr><td><b>'+esc(h.kindName||'納品書')+'</b></td><td>'+esc(h.no)+'</td><td>'+esc(h.date)+'</td><td>'+esc(h.partner)+'</td><td>'+esc(h.sub||'―')+
              '</td><td class="num">'+rt+'</td><td class="num">'+yen(h.total)+' 円</td>'+
-             '<td><button class="btn sm" onclick="editHistory(\''+h.id+'\')">直す</button> '+
+             '<td>'+inv+'<button class="btn sm" onclick="editHistory(\''+h.id+'\')">直す</button> '+
              '<button class="btn sm sub" onclick="reprint(\''+h.id+'\')">もう一度印刷</button> '+
              '<button class="btn danger sm" onclick="delHist(\''+h.id+'\')">削除</button></td></tr>';
     }).join('')+'</tbody></table>';
@@ -2316,6 +2411,7 @@ function delHist(id){
   var w=(h&&h.kind!=='mt')?'\n\n※ 消すと、合計請求書の集計からも外れます。':'';
   if(!confirm('「'+(h?h.kindName+' No.'+h.no:'この記録')+'」を消しますか？'+w)) return;
   if(editingId===id) endEdit();
+  if(invFromId===id){ endInvFrom(); clearAllSilent(); }
   S.history=S.history.filter(function(x){return x.id!==id;}); save(); renderHistory();
 }
 
