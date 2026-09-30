@@ -429,6 +429,58 @@ table.nou td.lbl{text-align:center}
   </div>
 
   <div class="step">
+    <h2><span class="n">D+</span>まとめて入れる（写真を見ながら）</h2>
+    <div class="body">
+      <div class="hint">紙の卸率表や商品表を見ながら、まとめて入力できます。写真を読み込むと<b>画面の左に出たまま</b>になるので、紙と画面を往復せずに済みます。</div>
+
+      <div class="row">
+        <div>
+          <label>写真（iPhoneのHEICもそのまま使えます）</label>
+          <button class="btn sub" onclick="document.getElementById('bulkImg').click()">写真をえらんで左に出す</button>
+          <input id="bulkImg" type="file" accept="image/*,.heic,.heif,.pdf" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:6px">
+        <div style="flex:1;min-width:300px">
+          <label for="bulkWhere">どこに入れるか</label>
+          <select id="bulkWhere" class="big" style="width:100%" onchange="onBulkWhere()">
+            <option value="partner">取引先（名前と卸率）</option>
+            <option value="sub">お届け先（名前と卸率）</option>
+            <option value="product">商品（シリーズ・大きさ・上代）</option>
+          </select>
+        </div>
+        <div id="bulkSubWrap" style="flex:1;min-width:280px;display:none">
+          <label for="bulkPartner">どの取引先のお届け先か</label>
+          <select id="bulkPartner" class="big" style="width:100%"></select>
+        </div>
+      </div>
+
+      <label for="bulkText" id="bulkLabel">1行に1件ずつ書いてください</label>
+      <div class="hint" id="bulkHelp"></div>
+      <textarea id="bulkText" style="min-height:190px"></textarea>
+
+      <div style="margin-top:12px">
+        <button class="btn" onclick="bulkPreview()">下の表で確かめる</button>
+        <button class="btn sub" onclick="bulkOcr()" id="bulkOcrBtn">左の写真から読み取って下書きにする</button>
+        <button class="btn sub" onclick="document.getElementById('bulkText').value='';document.getElementById('bulkTable').innerHTML=''">入力欄を消す</button>
+      </div>
+      <div id="bulkOcrProg" style="margin-top:12px;display:none">
+        <div style="background:#dde5ee;border-radius:8px;height:16px;overflow:hidden"><div id="bulkBar" style="background:var(--accent);height:100%;width:0%;transition:width .2s"></div></div>
+        <div id="bulkStat" class="hint" style="margin:6px 0 0"></div>
+      </div>
+      <div class="warnbox" style="margin-top:12px">
+        <b>⚠ 写真からの読み取りは、台帳には向きません。</b><br>
+        店名や数字を読みちがえます。読み取った結果は<b>下書き</b>です。
+        <b>かならず左の写真と1行ずつ見くらべて、直してから取り込んでください。</b>
+        台帳の卸率が1つ違うと、気づかないまま間違った金額で請求し続けることになります。
+      </div>
+      <div id="bulkTable" style="margin-top:14px"></div>
+      <div id="bulkMsg" class="msg"></div>
+    </div>
+  </div>
+
+  <div class="step">
     <h2><span class="n">E</span>データの持ち出し・引っ越し</h2>
     <div class="body">
       <div class="hint">別のパソコンで使うときや、バックアップを取るときに使います。</div>
@@ -483,7 +535,7 @@ table.nou td.lbl{text-align:center}
         <thead><tr><th style="width:230px">入れ方</th><th>どんなとき</th></tr></thead>
         <tbody>
           <tr><td><b>一覧からえらぶ</b></td><td>ふだんはこれ。商品名を押す→大きさを押す、の<b>2手</b>で明細に入ります。<br>上の「商品をさがす」に打つと、下がしぼられます。</td></tr>
-          <tr><td><b>発注書の画像を見ながら入れる</b></td><td>LINEの画像やFAXのスキャンを読み込むと、<b>画面の左にずっと表示されたまま</b>になります。見ながら入力できます。</td></tr>
+          <tr><td><b>発注書の画像を見ながら入れる</b></td><td>LINEの画像、FAXのスキャン、<b>iPhoneの写真（HEIC）やPDF</b>を読み込むと、<b>画面の左にずっと表示されたまま</b>になります。見ながら入力できます。<br><b>紙の発注書は、この方法がいちばん確実です。</b></td></tr>
           <tr><td><b>発注書を貼りつける</b></td><td>文字でもらった発注書を、1行に1商品ずつ貼りつけます。</td></tr>
           <tr><td><b>手で入力する</b></td><td>台帳にない商品を、その場で打ち込みます。</td></tr>
         </tbody>
@@ -509,7 +561,8 @@ table.nou td.lbl{text-align:center}
       <p><b>読み取った文字は、いきなり明細には入りません。</b>「発注書を貼りつける」の欄に入るだけです。
         左の画像と見くらべて、ちがうところを直してから明細に入れてください。</p>
       <p style="margin-bottom:0;color:var(--warn);font-weight:700">⚠ きれいな印刷はよく読めますが、手書きやかすれたFAXは正しく読めません。
-        とくに数量の数字は、かならず目で確かめてください。</p>
+        とくに数量の数字は、かならず目で確かめてください。<br>
+        読み取りがうまくいかない紙は、無理をせず<b>左に出した写真を見ながら「一覧からえらぶ」で入れてください。こちらは紙でも確実です。</b></p>
     </div>
   </div>
 
@@ -523,7 +576,9 @@ table.nou td.lbl{text-align:center}
           <tr><td>お届け先が一覧に無い</td><td>「― 基本の卸率を使う ―」のまま進めるか、「③設定 → C」で足します。</td></tr>
           <tr><td>商品が一覧に無い</td><td>その場でよければ「手で入力する」。これからも使うなら「③設定 → D」で足します。</td></tr>
           <tr><td>卸率がいつもと違う</td><td>納品書ぜんぶなら手順1の③。その商品だけなら明細表の「卸率」らん。</td></tr>
-          <tr><td>画像が表示されない</td><td>iPhoneの HEIC 形式かもしれません。写真アプリでJPEGに保存しなおすか、LINEで送ってもらうとJPEGになります。</td></tr>
+          <tr><td>iPhoneの写真（HEIC）を使いたい</td><td><b>そのまま読み込めます。</b>変換は要りません。読み込むときに少しだけ時間がかかります。</td></tr>
+          <tr><td>画像が表示されない</td><td>もう一度読み込んでみてください。それでもだめなら、写真アプリでJPEGに保存しなおしてください。</td></tr>
+          <tr><td>取引先や商品をたくさん入れたい</td><td>「③設定 → D+ まとめて入れる」で、1行ずつ書いて一度に登録できます。紙の表の写真を左に出しながら入力できます。</td></tr>
           <tr><td>文字がうまく読み取れない</td><td>「発注書の画像を見ながら入れる」の下にある<b>「うまく読めないときは」</b>を開いてください。パソコンに元から入っている文字認識の使い方が書いてあります。</td></tr>
           <tr><td>まちがえて消してしまった</td><td>「はじめからやり直す」を押す前なら、明細は画面に残っています。台帳を戻すには、書き出しておいたファイルから読み込みます。</td></tr>
         </tbody>
@@ -565,23 +620,74 @@ var PRODUCTS0 = [];
 /* 品名＝シリーズ＋規格。印刷にはこの形で出ます。 */
 function pname(g){ return g.spec ? g.group+'　'+g.spec : g.group; }
 
+/* ====================== iPhoneのHEIC写真を画像に変える ====================== */
+var HEIF='https://cdn.jsdelivr.net/npm/libheif-js@1.18.2/libheif-wasm/libheif-bundle.js';
+var heifReady=null;
+function loadHeif(){
+  if(heifReady) return heifReady;
+  heifReady=new Promise(function(ok,ng){
+    if(window.libheif) return ok();
+    var el=document.createElement('script');
+    el.src=HEIF; el.onload=function(){ ok(); };
+    el.onerror=function(){ heifReady=null; ng(new Error('HEIC変換の部品を取り込めませんでした')); };
+    document.head.appendChild(el);
+  });
+  return heifReady;
+}
+function isHeicFile(f){
+  var ext=((f.name||'').split('.').pop()||'').toLowerCase();
+  return ext==='heic' || ext==='heif' || f.type==='image/heic' || f.type==='image/heif';
+}
+/* HEICファイル → JPEGのBlob（大きすぎる写真は長辺3000pxに縮める） */
+async function heicToBlob(file, maxSide){
+  await loadHeif();
+  var lib = (typeof libheif==='function') ? await libheif() : libheif;
+  var dec = new lib.HeifDecoder();
+  var imgs = dec.decode(new Uint8Array(await file.arrayBuffer()));
+  if(!imgs || !imgs.length) throw new Error('この写真は読み取れませんでした');
+  var im=imgs[0], w=im.get_width(), h=im.get_height();
+  var c=document.createElement('canvas'); c.width=w; c.height=h;
+  var ctx=c.getContext('2d'); var idata=ctx.createImageData(w,h);
+  await new Promise(function(ok,ng){ im.display(idata, function(r){ r?ok():ng(new Error('画像に変えられませんでした')); }); });
+  ctx.putImageData(idata,0,0);
+  var side=Math.max(w,h);
+  if(maxSide && side>maxSide){
+    var sc=maxSide/side, c2=document.createElement('canvas');
+    c2.width=Math.round(w*sc); c2.height=Math.round(h*sc);
+    var x2=c2.getContext('2d'); x2.imageSmoothingQuality='high';
+    x2.drawImage(c,0,0,c2.width,c2.height); c=c2;
+  }
+  return await new Promise(function(ok){ c.toBlob(ok,'image/jpeg',0.9); });
+}
+
 /* ====================== 発注書の画像 ====================== */
 var imgs=[], imgIdx=0, rot=0, zoom=0;   /* zoom 0=はばに合わせる */
 
-function addImgs(files){
-  var add=0, bad=[];
-  Array.prototype.forEach.call(files, function(f){
-    var n=f.name||'', ext=(n.split('.').pop()||'').toLowerCase();
+async function addImgs(files){
+  var add=0, bad=[], heicNg=[];
+  var list=Array.prototype.slice.call(files);
+  var anyHeic=list.some(isHeicFile);
+  if(anyHeic) flash('imgMsg','iPhoneの写真（HEIC）を画像に変えています。少しお待ちください…', true);
+  for(var i=0;i<list.length;i++){
+    var f=list[i], n=f.name||'', ext=(n.split('.').pop()||'').toLowerCase();
     var isPdf = f.type==='application/pdf' || ext==='pdf';
-    var isHeic = ext==='heic' || ext==='heif';
-    var isImg  = (f.type||'').indexOf('image/')===0 || /^(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/.test(ext);
-    if(!isPdf && !isImg){ bad.push(n); return; }
-    imgs.push({name:n, url:URL.createObjectURL(f), pdf:isPdf, heic:isHeic});
+    var isImg = (f.type||'').indexOf('image/')===0 || /^(jpg|jpeg|png|gif|webp|bmp|heic|heif)$/.test(ext);
+    if(!isPdf && !isImg){ bad.push(n); continue; }
+    if(isHeicFile(f)){
+      try{
+        var blob=await heicToBlob(f, 3000);
+        imgs.push({name:n, url:URL.createObjectURL(blob), pdf:false, heic:false});
+        add++;
+      }catch(e){ heicNg.push(n); }
+      continue;
+    }
+    imgs.push({name:n, url:URL.createObjectURL(f), pdf:isPdf, heic:false});
     add++;
-  });
+  }
   if(add){ imgIdx=imgs.length-add; rot=0; zoom=0; showImg(); }
-  if(bad.length) flash('imgMsg','この形式は開けませんでした：'+bad.join('、'),false);
-  else if(add)   flash('imgMsg', add+'件を読み込みました。左側に表示しています。', true);
+  var ng=bad.concat(heicNg);
+  if(ng.length) flash('imgMsg','開けなかったファイルがあります：'+ng.join('、')+(heicNg.length?'　（iPhoneの写真をJPEGで保存しなおすと開けます）':''),false);
+  else if(add)  flash('imgMsg', add+'件を読み込みました。左側に表示しています。', true);
   renderImgList();
 }
 function showImg(){
@@ -1133,7 +1239,7 @@ function renderMaster(){
   document.getElementById('mCo').value=S.self.co; document.getElementById('mAddr').value=S.self.addr;
   document.getElementById('mTel').value=S.self.tel; document.getElementById('mFax').value=S.self.fax;
   document.getElementById('mInv').value=S.self.inv;
-  renderPartners(); renderSubs(); renderProducts();
+  renderPartners(); renderSubs(); renderProducts(); onBulkWhere();
 }
 function renderPartners(){
   document.getElementById('pTable').innerHTML =
@@ -1254,6 +1360,198 @@ function addProduct(){
   S.products.push({id:'g'+Date.now(), group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0});
   document.getElementById('gSpec').value=''; document.getElementById('gPrice').value=0;
   save(); renderProducts();
+}
+
+/* ====================== まとめて入れる ====================== */
+var BULK = {
+  partner:{label:'1行に「取引先名　卸率」を書いてください',
+    help:'名前と数字のあいだは、スペースでもカンマでもかまいません。全角スペースでも読めます。',
+    ph:'〇〇株式会社 37\n株式会社　△△ 38\n有限会社　□□ 45'},
+  sub:{label:'1行に「お届け先名　卸率」を書いてください',
+    help:'卸率のところに「基本」と書くか、空にすると、その取引先の基本の卸率を使います。',
+    ph:'〇〇屋 基本\n△△産業 32\n□□商事 30'},
+  product:{label:'1行に「シリーズ　大きさ　上代」を書いてください',
+    help:'大きさが無い商品は「シリーズ 上代」の2つだけでかまいません。上代は税抜きの数字です。',
+    ph:'〇〇クリーム 45g 18181\n〇〇クリーム 90g 30000\n〇〇ソープ 4500'}
+};
+function onBulkWhere(){
+  var k=document.getElementById('bulkWhere').value, c=BULK[k];
+  document.getElementById('bulkLabel').textContent=c.label;
+  document.getElementById('bulkHelp').textContent=c.help;
+  document.getElementById('bulkText').placeholder=c.ph;
+  document.getElementById('bulkSubWrap').style.display = (k==='sub')?'flex':'none';
+  var sel=document.getElementById('bulkPartner'), keep=sel.value;
+  sel.innerHTML=S.partners.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'（基本'+p.baseRate+'％）</option>';}).join('');
+  if(keep) sel.value=keep;
+  document.getElementById('bulkTable').innerHTML='';
+}
+
+/* 貼りつけた文字を1行ずつ読む */
+function bulkParse(){
+  var k=document.getElementById('bulkWhere').value;
+  var out=[];
+  document.getElementById('bulkText').value.split(/\r?\n/).forEach(function(line){
+    line=line.replace(/[｜|]/g,' ').trim();
+    if(!line) return;
+    var t=line.split(/[,\t]/).length>1 ? line.split(/[,\t]/) : line.split(/[ \u3000]+/);
+    t=t.map(function(x){return x.trim();}).filter(function(x){return x!=='';});
+    if(!t.length) return;
+    if(k==='product'){
+      var price=null, spec='', name='';
+      var last=t[t.length-1].replace(/[^0-9０-９]/g,'');
+      if(last!==''){ price=parseInt(norm(t[t.length-1].replace(/[^0-9０-９]/g,'')),10); t=t.slice(0,-1); }
+      if(t.length>=2){ spec=t[t.length-1]; name=t.slice(0,-1).join('　'); }
+      else { name=t.join('　'); }
+      out.push({ok:(!!name && price!=null), name:name, spec:spec, price:price, raw:line});
+    }else{
+      var rate=null, ok=true, nm='';
+      var tail=t[t.length-1];
+      if(/^(基本|きほん|-|―|ー)$/.test(tail)){ rate=null; t=t.slice(0,-1); }
+      else{
+        var num=norm(tail).replace(/[^0-9.]/g,'');
+        if(num!=='' && Number(num)>0 && Number(num)<=100){ rate=Math.round(Number(num)); t=t.slice(0,-1); }
+        else if(k==='sub'){ rate=null; }
+        else { ok=false; }
+      }
+      nm=t.join('　').trim();
+      if(!nm) ok=false;
+      out.push({ok:ok, name:nm, rate:rate, raw:line});
+    }
+  });
+  return out;
+}
+function bulkPreview(){
+  var k=document.getElementById('bulkWhere').value, rows=bulkParse();
+  var w=document.getElementById('bulkTable');
+  if(!rows.length){ w.innerHTML=''; flash('bulkMsg','読み取れる行がありませんでした。',false); return; }
+  var ng=rows.filter(function(r){return !r.ok;}).length;
+  var head = (k==='product')
+    ? '<tr><th style="width:40px"></th><th>シリーズ</th><th>大きさ</th><th class="num">上代</th></tr>'
+    : '<tr><th style="width:40px"></th><th>名前</th><th class="num">卸率</th></tr>';
+  w.innerHTML='<table class="grid"><thead>'+head+'</thead><tbody>'+
+    rows.map(function(r,i){
+      var mark = r.ok?'<span style="color:var(--ok);font-weight:700">✓</span>'
+                    :'<span style="color:var(--warn);font-weight:700">✕</span>';
+      if(k==='product'){
+        return '<tr class="'+(r.ok?'':'miss')+'"><td>'+mark+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.spec)+
+               '</td><td class="num">'+(r.price==null?'<span style="color:var(--warn)">上代が読めません</span>':yen(r.price))+'</td></tr>';
+      }
+      return '<tr class="'+(r.ok?'':'miss')+'"><td>'+mark+'</td><td>'+esc(r.name)+
+             '</td><td class="num">'+(r.rate==null?'基本':r.rate+'％')+'</td></tr>';
+    }).join('')+'</tbody></table>'+
+    '<div style="margin-top:12px">'+
+      '<button class="btn" onclick="bulkCommit(false)">この内容を台帳に足す（'+rows.filter(function(r){return r.ok;}).length+'件）</button> '+
+      '<button class="btn danger" onclick="bulkCommit(true)">いまの中身を消して、これに入れ替える</button>'+
+    '</div>';
+  if(ng) flash('bulkMsg','✕ の '+ng+' 行は読み取れませんでした。直してから、もう一度「下の表で確かめる」を押してください。（✕の行は取り込まれません）',false);
+  else   flash('bulkMsg','左の写真と見くらべて、合っているか確かめてください。よければ下のボタンで台帳に入ります。',true);
+}
+function bulkCommit(replace){
+  var k=document.getElementById('bulkWhere').value;
+  var rows=bulkParse().filter(function(r){return r.ok;});
+  if(!rows.length){ flash('bulkMsg','取り込める行がありません。',false); return; }
+  var where = (k==='partner')?'取引先' : (k==='sub')?'お届け先' : '商品';
+  var p=null;
+  if(k==='sub'){
+    p=S.partners.filter(function(x){return x.id===document.getElementById('bulkPartner').value;})[0];
+    if(!p){ flash('bulkMsg','どの取引先のお届け先か、えらんでください。',false); return; }
+    where='「'+p.name+'」のお届け先';
+  }
+  var msg = replace
+    ? 'いまの'+where+'をすべて消して、'+rows.length+'件に入れ替えます。\n消したものは元に戻せません。よろしいですか？'
+    : where+'に '+rows.length+'件 を足します。よろしいですか？';
+  if(!confirm(msg)) return;
+
+  var t=Date.now(), n=0;
+  if(k==='partner'){
+    if(replace){ S.partners=[]; cur.partnerId=''; cur.subId=''; }
+    rows.forEach(function(r){
+      var rate=(r.rate==null?35:r.rate);
+      S.partners.push({id:'p'+(t+(n++)), name:r.name, rate:rate, baseRate:rate, close:'', pay:'', memo:'', inv:'', subs:[]});
+    });
+  }else if(k==='sub'){
+    if(!p.subs) p.subs=[];
+    if(replace){ p.subs=[]; cur.subId=''; }
+    rows.forEach(function(r){ p.subs.push({id:'s'+(t+(n++)), name:r.name, rate:r.rate}); });
+  }else{
+    if(replace) S.products=[];
+    rows.forEach(function(r){
+      if(S.products.some(function(x){return x.group===r.name && (x.spec||'')===r.spec;})) return;
+      S.products.push({id:'g'+(t+(n++)), group:r.name, spec:r.spec, price:r.price});
+    });
+  }
+  save(); renderMaster(); onBulkWhere(); onPartner(); renderAll();
+  document.getElementById('bulkText').value=''; document.getElementById('bulkTable').innerHTML='';
+  flash('bulkMsg', where+'に取り込みました。上の表で中身を確かめてください。', true);
+}
+
+/* 写真から下書きを作る（あくまで下書き） */
+function bulkOcr(){
+  if(!imgs.length){ flash('bulkMsg','さきに「写真をえらんで左に出す」で写真を読み込んでください。',false); return; }
+  var f=imgs[imgIdx];
+  if(f.pdf){ flash('bulkMsg','PDFはそのままでは読み取れません。画像で保存しなおしてください。',false); return; }
+  var btn=document.getElementById('bulkOcrBtn');
+  btn.disabled=true; btn.textContent='読み取っています…';
+  var prog=document.getElementById('bulkOcrProg'); prog.style.display='block';
+  function stat(pc,m){ document.getElementById('bulkBar').style.width=Math.round(pc*100)+'%'; document.getElementById('bulkStat').textContent=m; }
+  stat(0.02,'準備をしています（はじめの1回だけ少し時間がかかります）');
+  loadTess().then(function(){
+    stat(0.08,'写真をくっきりさせています');
+    return sharpenForOcr(f.url, rot);
+  }).then(function(canvas){
+    stat(0.12,'読み取り中…');
+    return Tesseract.createWorker('jpn').then(function(w){
+      return w.setParameters({tessedit_pageseg_mode:'11'}).then(function(){
+        return w.recognize(canvas);
+      });
+    });
+  }).then(function(res){
+    var txt=String(res.data.text||'').split(/\r?\n/)
+      .map(function(l){ return l.replace(/[｜|]/g,' ').replace(/[ \u3000]{2,}/g,' ').trim(); })
+      .filter(function(l){ return l && l.length>1; }).join('\n');
+    document.getElementById('bulkText').value=txt;
+    stat(1,'読み取りが終わりました。');
+    bulkPreview();
+    flash('bulkMsg','下書きを入れました。⚠ このままでは間違っています。左の写真と1行ずつ見くらべて直してください。',false);
+  }).catch(function(e){
+    prog.style.display='none';
+    flash('bulkMsg','読み取れませんでした（'+e.message+'）。',false);
+  }).then(function(){
+    btn.disabled=false; btn.textContent='左の写真から読み取って下書きにする';
+  });
+}
+/* 読み取り前に：向きを直す→2倍に拡大→白黒にする */
+function sharpenForOcr(url, rotate){
+  return new Promise(function(ok,ng){
+    var im=new Image();
+    im.onload=function(){
+      var c=document.createElement('canvas'), x;
+      if(rotate%2===1){ c.width=im.height; c.height=im.width; }
+      else { c.width=im.width; c.height=im.height; }
+      x=c.getContext('2d');
+      x.translate(c.width/2,c.height/2); x.rotate(rotate*Math.PI/2);
+      x.drawImage(im,-im.width/2,-im.height/2);
+      var sc=Math.min(2, 3600/Math.max(c.width,c.height));
+      if(sc>1){ var b=document.createElement('canvas'); b.width=Math.round(c.width*sc); b.height=Math.round(c.height*sc);
+        var bx=b.getContext('2d'); bx.imageSmoothingQuality='high'; bx.drawImage(c,0,0,b.width,b.height); c=b; }
+      ok(otsu(c));
+    };
+    im.onerror=function(){ ng(new Error('写真を開けませんでした')); };
+    im.src=url;
+  });
+}
+function otsu(src){
+  var x=src.getContext('2d'), d=x.getImageData(0,0,src.width,src.height), p=d.data;
+  var hist=new Array(256).fill(0), g=new Uint8Array(p.length/4), i, j;
+  for(i=0,j=0;i<p.length;i+=4,j++){ var v=(p[i]*299+p[i+1]*587+p[i+2]*114)/1000|0; g[j]=v; hist[v]++; }
+  var total=g.length, sum=0, t;
+  for(t=0;t<256;t++) sum+=t*hist[t];
+  var sumB=0, wB=0, max=0, th=128;
+  for(t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; var wF=total-wB; if(!wF) break;
+    sumB+=t*hist[t]; var mB=sumB/wB, mF=(sum-sumB)/wF, bt=wB*wF*(mB-mF)*(mB-mF);
+    if(bt>max){ max=bt; th=t; } }
+  for(i=0,j=0;i<p.length;i+=4,j++){ var q=g[j]>th?255:0; p[i]=p[i+1]=p[i+2]=q; p[i+3]=255; }
+  x.putImageData(d,0,0); return src;
 }
 
 /* ====================== 書き出し・読み込み ====================== */
