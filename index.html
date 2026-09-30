@@ -200,6 +200,13 @@ table.nou td.lbl{text-align:center}
   <div class="co" id="headCo"></div>
 </div>
 
+<div id="newVer" style="display:none;background:#e8f5e9;border-bottom:3px solid #2e7d32;color:#1b5e20;padding:14px 20px;font-weight:700">
+  ✨ 新しい版が出ています（<span id="newVerNo"></span>）。
+  <span style="font-weight:400">いまお使いの版は <span id="curVerNo"></span> です。</span>
+  <button class="btn" style="margin-left:10px" onclick="applyNewVer()">新しくする</button>
+  <span style="font-weight:400;font-size:14px">※入力中の内容は消えます。台帳は残ります。</span>
+</div>
+
 <div id="rescueWarn" style="display:none;background:#fff4e5;border-bottom:3px solid #e65100;color:#8a4500;padding:14px 20px;font-weight:700">
   ⚠ 前回の台帳が読み取れませんでした。<br>
   <span style="font-weight:400">中身は消さずに取ってあります。下のボタンでファイルに出せますので、そのまま大峯までお送りください。
@@ -517,6 +524,15 @@ table.nou td.lbl{text-align:center}
       </div>
 
       <div class="nameprev">納品書に出る品名：<b id="gPrev">―</b></div>
+
+      <div style="margin-top:14px">
+        <button class="btn sub" onclick="renormalizeAll()">いま台帳にある商品の「大きさ」を整え直す</button>
+        <div class="hint" style="margin-top:6px">
+          カテゴリのきまりに合わせて、いま入っている商品の大きさを付け直します
+          （化粧品「200」→「200g」、ネックレス「黒 6 55」→「黒6P55cm」など）。
+          読み解けない文字はそのまま残します。
+        </div>
+      </div>
       <div id="gMsg" class="msg"></div>
       <div id="gTable"></div>
     </div>
@@ -692,6 +708,11 @@ table.nou td.lbl{text-align:center}
           <tr><td>画像が表示されない</td><td>もう一度読み込んでみてください。それでもだめなら、写真アプリでJPEGに保存しなおしてください。</td></tr>
           <tr><td>取引先や商品をたくさん入れたい</td><td>「③設定 → D+ まとめて入れる」で、1行ずつ書いて一度に登録できます。紙の表の写真を左に出しながら入力できます。</td></tr>
           <tr><td>③設定の画面が長くて見づらい</td><td><b>B・C・D の見出しを押すと折りたためます。</b>商品はカテゴリごとにも折りたためます。開け閉めした状態は次に開いたときも残ります。</td></tr>
+          <tr><td>直したはずなのに画面が変わらない</td><td>ブラウザが古いものを覚えていることがあります。<br>
+            <b>新しい版が出ていれば、画面のいちばん上に緑の帯</b>が出ます。「新しくする」を押してください。<br>
+            帯が出ないのに変わらないときは、URLの末尾に <b>?v=9</b> を付けて開いてください（数字は何でもかまいません）。</td></tr>
+          <tr><td>前に入れた商品の大きさも整えたい</td><td>「③設定 → D」の入力欄の下にある<b>「いま台帳にある商品の『大きさ』を整え直す」</b>を押してください。
+            何がどう変わるか先に一覧で出ます。</td></tr>
           <tr><td>大きさの単位を毎回打つのが面倒</td><td><b>カテゴリに合わせて自動で付きます。</b><br>
             ・化粧品 … 数字だけ打てば <b>g</b> が付きます（「200」→「200g」）。「120ml」のように単位を書けばそのままです。<br>
             ・ネックレス … 「桃 8 追加 50」のように書けば <b>「桃8P追加50cm」</b>に整います。色・追加・長さも自動で読み取ります。<br>
@@ -735,7 +756,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-n';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-o';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1168,6 +1189,29 @@ function restorePrev(){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 function yen(n){ return Number(n||0).toLocaleString('ja-JP'); }
 function flash(id,text,ok){ var e=document.getElementById(id); e.textContent=text; e.className='msg '+(ok?'ok':'ng'); setTimeout(function(){e.className='msg';},4000); }
+
+/* ====================== 新しい版のお知らせ ======================
+   GitHub Pages は「10分間は再確認しなくてよい」と指示するため、
+   ふつうに再読み込みしてもブラウザが古いものを出し続けることがある。
+   そこで、アプリ自身がサーバーに直接聞きに行って、版が変わっていたら知らせる。 */
+var newVerFound=null;
+function checkNewVersion(){
+  if(location.protocol==='file:') return;           /* ファイルで開いているときは何もしない */
+  var url=location.pathname+'?vc='+Date.now();
+  fetch(url,{cache:'no-store'}).then(function(r){ return r.ok?r.text():null; }).then(function(txt){
+    if(!txt) return;
+    var m=txt.match(/APPVER\s*=\s*'([^']+)'/);
+    if(m && m[1] && m[1]!==APPVER){
+      newVerFound=m[1];
+      document.getElementById('newVerNo').textContent=m[1];
+      document.getElementById('curVerNo').textContent=APPVER;
+      document.getElementById('newVer').style.display='block';
+    }
+  }).catch(function(){});
+}
+function applyNewVer(){
+  location.replace(location.pathname+'?v='+(newVerFound||Date.now()));
+}
 
 /* ====================== 折りたたみ ====================== */
 var UIKEY='nouhinsho_ui';
@@ -1851,6 +1895,31 @@ function changeCat(id,v){
     (before!==after ? '品名の区切りが変わり「'+esc(after)+'」になりました。' : ''), true);
 }
 
+/* いま台帳にある商品の「大きさ」を、カテゴリのきまりで整え直す */
+function renormalizeAll(){
+  if(!S.products.length){ flash('gMsg','商品が入っていません。',false); return; }
+  var plan=[];
+  S.products.forEach(function(g){
+    var nz=normalizeSpec(g.cat||'その他', g.spec);
+    if(nz.spec!==(g.spec||'')) plan.push({g:g, before:pname(g), spec:nz.spec, parts:nz.parts||{}});
+  });
+  if(!plan.length){ flash('gMsg','整え直すところはありませんでした。すべてきまりどおりです。',true); return; }
+  var list=plan.slice(0,12).map(function(x){
+    var t={cat:x.g.cat, group:x.g.group, spec:x.spec};
+    return '　・'+x.before+'  →  '+pname(t);
+  }).join('\n');
+  if(!confirm(plan.length+' 件の大きさを整え直します。\n\n'+list+
+      (plan.length>12?'\n　…ほか '+(plan.length-12)+' 件':'')+'\n\nよろしいですか？')) return;
+  plan.forEach(function(x){
+    var g=x.g, pp=x.parts;
+    g.spec=x.spec;
+    if((g.cat||'')===NECK){ g.color=pp.color||''; g.num=pp.num||''; g.unit=pp.unit||''; g.extra=!!pp.extra; g.length=pp.length||''; }
+    else { g.size=pp.size||''; g.unit=pp.unit||''; }
+  });
+  save(); renderProducts(); renderAll();
+  flash('gMsg', plan.length+' 件を整え直しました。', true);
+}
+
 /* 表示の並びを入れ替える */
 function moveG(i,d){
   var j=i+d;
@@ -2201,6 +2270,8 @@ function boot(){
   if(firstRun){ showPage('help'); firstRun=false; save(); }
 }
 load(); loadUI(); checkStore(); showRescue(); boot();
+checkNewVersion();
+setInterval(checkNewVersion, 5*60*1000);
 </script>
 </body>
 </html>
