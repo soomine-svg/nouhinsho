@@ -867,7 +867,7 @@ table.nou td.lbl{text-align:center}
             ※ 以前は空白のところで勝手に折れていましたが、いまは<b>Enterで押したところだけ</b>折れます。</td></tr>
           <tr><td>A4の1枚に収まるか心配</td><td><b>用紙はA4（たて）、表の幅は17.5cmです</b>（左右の余白は1.75cmになります）。1枚に収まらないときは、
             「できあがりの確認」の上に<b>オレンジの帯</b>が出ます。印刷を押したときにも一度止まります。<br>
-            <b>納品書と請求書は、同じ15行の枠</b>で刷られます（中身が同じ対なので、行の数もそろえています）。<br>1枚に入るのは、商品と書き添えることばを合わせて<b>15行ほど</b>です。それを超えると、先に請求書が入りきらなくなるので、納品書を作っている段階で知らせます。<br>
+            空の行も含めた表の行は、<b>納品書が13行、請求書が15行</b>の枠で刷られます。<br>1枚に入るのは、商品と書き添えることばを合わせて<b>15行ほど</b>です。それを超えると、先に請求書が入りきらなくなるので、納品書を作っている段階で知らせます。<br>
             帯が出たら、商品を減らすか、「書き添えることば」の空の行を減らしてください。</td></tr>
           <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
             入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
@@ -958,7 +958,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-zc';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-zd';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1852,7 +1852,7 @@ function sheetHTML(){
   notes.forEach(function(x){
     body+='<tr><td class="c-no"></td><td class="c-name">'+esc(x)+'</td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
   });
-  var filler=Math.max(0, SHEET_ROWS-(c.rows.length+notes.length));
+  var filler=Math.max(0, (isSei()?SHEET_ROWS:NOU_ROWS)-(c.rows.length+notes.length));
   for(var i=0;i<filler;i++) body+='<tr><td class="c-no"></td><td class="c-name"></td><td class="c-qty"></td><td class="c-list"></td><td class="c-amt"></td><td class="c-memo"></td></tr>';
 
   var sei=isSei();
@@ -1923,6 +1923,8 @@ function renderSheet(){
    以前は 納品書18行・請求書13行で、納品書が1枚に収まっても請求書は2枚になることがあった。
    15行＝請求書（合計請求額と振込先のぶん高い）が A4 の1枚に収まる数。 */
 var SHEET_ROWS=15;
+/* 納品書だけ2行少なくする（2026-10-01 本人指示。「請求書が2枚にまたがることはない」とのこと） */
+var NOU_ROWS=13;
 /* いまの画面の中身を請求書にしたときの高さ（mm）。画面の外で描いて測る。 */
 function invoiceHeightMm(){
   var m=document.getElementById('measureBox');
