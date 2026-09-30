@@ -561,11 +561,12 @@ table.nou td.lbl{text-align:center}
       </div>
       <label for="bulkText" id="bulkLabel">1行に1件ずつ書いてください</label>
       <div class="hint" id="bulkHelp"></div>
-      <textarea id="bulkText" style="min-height:190px"></textarea>
+      <textarea id="bulkText" style="min-height:190px" oninput="bulkTouch()"></textarea>
+      <div class="hint" id="bulkLive" style="margin-top:6px"></div>
 
-      <div class="bstep" style="margin-top:20px"><span class="bn">④</span>確かめる</div>
+      <div class="bstep" style="margin-top:20px"><span class="bn">④</span>確かめる<span class="bnote">（直すたびに、下の表は自動で作り直されます）</span></div>
       <div style="margin-bottom:6px">
-        <button class="btn" onclick="bulkPreview()">下の表で確かめる</button>
+        <button class="btn" onclick="bulkPreview()">いますぐ下の表を作り直す</button>
       </div>
       <div id="bulkOcrProg" style="margin-top:12px;display:none">
         <div style="background:#dde5ee;border-radius:8px;height:16px;overflow:hidden"><div id="bulkBar" style="background:var(--accent);height:100%;width:0%;transition:width .2s"></div></div>
@@ -686,6 +687,7 @@ table.nou td.lbl{text-align:center}
           <tr><td>画像が表示されない</td><td>もう一度読み込んでみてください。それでもだめなら、写真アプリでJPEGに保存しなおしてください。</td></tr>
           <tr><td>取引先や商品をたくさん入れたい</td><td>「③設定 → D+ まとめて入れる」で、1行ずつ書いて一度に登録できます。紙の表の写真を左に出しながら入力できます。</td></tr>
           <tr><td>③設定の画面が長くて見づらい</td><td><b>B・C・D の見出しを押すと折りたためます。</b>商品はカテゴリごとにも折りたためます。開け閉めした状態は次に開いたときも残ります。</td></tr>
+          <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
           <tr><td>商品のカテゴリを変えたい</td><td>「③設定 → D」の各行にある<b>カテゴリの欄</b>でえらび直せます。あとからいつでも変えられます。<br>「まとめて入れる」で足すときは、②の「どのカテゴリに入れるか」でえらんでください。</td></tr>
           <tr><td>商品の並び順を変えたい</td><td>「③設定 → D」の各行の左にある <b>▲▼</b> で入れ替えられます。この順番が、納品書を作るときの並びにもなります。</td></tr>
           <tr><td>ネックレスの品名を入れたい</td><td>カテゴリで「ネックレス」をえらぶと、<b>色・数字・単位・「追加」・長さ</b>をえらぶ欄が出ます。<br>できあがる品名は入力欄の下に出るので、見ながら組み立ててください。（例：〇〇桃8P追加50cm）</td></tr>
@@ -722,7 +724,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-j';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-k';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1831,7 +1833,8 @@ function onBulkWhere(){
   var sel=document.getElementById('bulkPartner'), keep=sel.value;
   sel.innerHTML=S.partners.map(function(p){return '<option value="'+p.id+'">'+esc(p.name)+'（基本'+p.baseRate+'％）</option>';}).join('');
   if(keep) sel.value=keep;
-  document.getElementById('bulkTable').innerHTML='';
+  if(document.getElementById('bulkText').value.trim()) bulkPreview();
+  else document.getElementById('bulkTable').innerHTML='';
 }
 
 /* 貼りつけた文字を1行ずつ読む */
@@ -1868,10 +1871,24 @@ function bulkParse(){
   });
   return out;
 }
+/* 入力欄を直したら、打ち終わるのを少し待ってから表を作り直す。
+   押し忘れて「古い表を見たまま⑤を押す」事故を防ぐため。 */
+var bulkTimer=null;
+function bulkTouch(){
+  var live=document.getElementById('bulkLive');
+  if(live){ live.innerHTML='<span style="color:#e65100;font-weight:700">直した内容を読み込んでいます…</span>'; }
+  var tb=document.getElementById('bulkTable');
+  if(tb) tb.style.opacity='.35';
+  if(bulkTimer) clearTimeout(bulkTimer);
+  bulkTimer=setTimeout(function(){ bulkTimer=null; bulkPreview(); }, 500);
+}
 function bulkPreview(){
+  if(bulkTimer){ clearTimeout(bulkTimer); bulkTimer=null; }
+  var live=document.getElementById('bulkLive'); if(live) live.textContent='';
+  var tb0=document.getElementById('bulkTable'); if(tb0) tb0.style.opacity='1';
   var k=document.getElementById('bulkWhere').value, rows=bulkParse();
   var w=document.getElementById('bulkTable');
-  if(!rows.length){ w.innerHTML=''; flash('bulkMsg','読み取れる行がありませんでした。',false); return; }
+  if(!rows.length){ w.innerHTML=''; document.getElementById('bulkMsg').className='msg'; return; }
   var ng=rows.filter(function(r){return !r.ok;}).length;
   var head = (k==='product')
     ? '<tr><th style="width:40px"></th><th>シリーズ</th><th>大きさ</th><th class="num">上代</th></tr>'
