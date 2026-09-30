@@ -646,7 +646,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-g';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-h';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -838,6 +838,38 @@ function wordsToLines(data){
   }).filter(function(l){ return l && l.length>1; });
 }
 
+/* 読み取りの当たりは書類によって変わる。
+   ・PSM 11（ばらばらの文字を拾う）… 表の写真に強い
+   ・PSM 6 （ひとかたまりの文章）  … 見出しや箇条書きに強い
+   ・PSM 3 （おまかせ）            … きれいな印刷に強い
+   1つに決め打ちすると外した書類で全滅するので、3通り試して
+   「はっきり読めた語がいちばん多い」ものを自動で採る。 */
+var OCR_MODES = ['11','6','3'];
+function ocrScore(data){
+  var n=0;
+  (data.blocks||[]).forEach(function(b){ (b.paragraphs||[]).forEach(function(pg){
+    (pg.lines||[]).forEach(function(ln){ (ln.words||[]).forEach(function(w){
+      if(w.text && w.text.trim() && w.confidence!=null && w.confidence>=60) n++;
+    }); });
+  }); });
+  return n;
+}
+async function ocrBest(canvas, onProgress){
+  var best=null;
+  for(var i=0;i<OCR_MODES.length;i++){
+    if(onProgress) onProgress(0.15+0.8*(i/OCR_MODES.length), '読み取り中… ('+(i+1)+'/'+OCR_MODES.length+'通り試しています)');
+    var w = await Tesseract.createWorker('jpn');
+    try{
+      await w.setParameters({tessedit_pageseg_mode: OCR_MODES[i]});
+      var r = await w.recognize(canvas, {}, {blocks:true, text:true});
+      var sc = ocrScore(r.data);
+      if(!best || sc > best.score) best = {score:sc, data:r.data, psm:OCR_MODES[i]};
+    }catch(e){ /* この設定は飛ばす */ }
+    try{ await w.terminate(); }catch(e){}
+  }
+  return best;
+}
+
 function ocrStat(pct,msg){
   document.getElementById('ocrProg').style.display='block';
   document.getElementById('ocrBar').style.width=Math.round(pct*100)+'%';
@@ -854,21 +886,16 @@ function runOcr(){
     ocrStat(0.08,'写真を整えています');
     return uprightForOcr(f.url, rot);
   }).then(function(canvas){
-    ocrStat(0.12,'読み取り中…');
-    return Tesseract.createWorker('jpn').then(function(w){
-      return w.setParameters({tessedit_pageseg_mode:'6'})
-        .then(function(){ return w.recognize(canvas, {}, {blocks:true, text:true}); })
-        .then(function(r){ w.terminate(); return r; });
-    });
-  }).then(function(res){
-    var lines = wordsToLines(res.data);
+    return ocrBest(canvas, ocrStat);
+  }).then(function(best){
+    if(!best) throw new Error('読み取れませんでした');
+    var lines = wordsToLines(best.data);
     if(!lines || !lines.length){
-      lines = String(res.data.text||'').split(/\r?\n/)
+      lines = String(best.data.text||'').split(/\r?\n/)
         .map(function(l){ return l.replace(/[ \u3000]{2,}/g,' ').trim(); })
         .filter(function(l){ return l; });
     }
-    var txt = lines.join('\n');
-    document.getElementById('txtPaste').value=txt;
+    document.getElementById('txtPaste').value = lines.join('\n');
     ocrStat(1,'読み取りが終わりました。');
     mode('paste');
     flash('pasteMsg','読み取った文字を入れました。左の発注書と見くらべて、ちがうところを直してから「読み取って明細に入れる」を押してください。',true);
@@ -1657,19 +1684,15 @@ function bulkOcr(){
   function stat(pc,m){ document.getElementById('bulkBar').style.width=Math.round(pc*100)+'%'; document.getElementById('bulkStat').textContent=m; }
   stat(0.02,'準備をしています（はじめの1回だけ少し時間がかかります）');
   loadTess().then(function(){
-    stat(0.08,'写真をくっきりさせています');
-    return sharpenForOcr(f.url, rot);
+    stat(0.08,'写真を整えています');
+    return uprightForOcr(f.url, rot);
   }).then(function(canvas){
-    stat(0.12,'読み取り中…');
-    return Tesseract.createWorker('jpn').then(function(w){
-      return w.setParameters({tessedit_pageseg_mode:'6'}).then(function(){
-        return w.recognize(canvas, {}, {blocks:true, text:true});
-      });
-    });
-  }).then(function(res){
-    var lines = wordsToLines(res.data);
+    return ocrBest(canvas, stat);
+  }).then(function(best){
+    if(!best) throw new Error('読み取れませんでした');
+    var lines = wordsToLines(best.data);
     if(!lines || !lines.length){
-      lines = String(res.data.text||'').split(/\r?\n/)
+      lines = String(best.data.text||'').split(/\r?\n/)
         .map(function(l){ return l.trim(); }).filter(function(l){ return l && l.length>1; });
     }
     document.getElementById('bulkText').value = lines.map(function(l){
@@ -1705,40 +1728,6 @@ function uprightForOcr(url, rotate){
     im.onerror=function(){ ng(new Error('写真を開けませんでした')); };
     im.src=url;
   });
-}
-
-/* 台帳の下書き用：向きを直す→拡大→白黒にする（平らに写した表むけ） */
-function sharpenForOcr(url, rotate){
-  return new Promise(function(ok,ng){
-    var im=new Image();
-    im.onload=function(){
-      var c=document.createElement('canvas'), x;
-      if(rotate%2===1){ c.width=im.height; c.height=im.width; }
-      else { c.width=im.width; c.height=im.height; }
-      x=c.getContext('2d');
-      x.translate(c.width/2,c.height/2); x.rotate(rotate*Math.PI/2);
-      x.drawImage(im,-im.width/2,-im.height/2);
-      var sc=Math.min(2, 3600/Math.max(c.width,c.height));
-      if(sc>1){ var b=document.createElement('canvas'); b.width=Math.round(c.width*sc); b.height=Math.round(c.height*sc);
-        var bx=b.getContext('2d'); bx.imageSmoothingQuality='high'; bx.drawImage(c,0,0,b.width,b.height); c=b; }
-      ok(otsu(c));
-    };
-    im.onerror=function(){ ng(new Error('写真を開けませんでした')); };
-    im.src=url;
-  });
-}
-function otsu(src){
-  var x=src.getContext('2d'), d=x.getImageData(0,0,src.width,src.height), p=d.data;
-  var hist=new Array(256).fill(0), g=new Uint8Array(p.length/4), i, j;
-  for(i=0,j=0;i<p.length;i+=4,j++){ var v=(p[i]*299+p[i+1]*587+p[i+2]*114)/1000|0; g[j]=v; hist[v]++; }
-  var total=g.length, sum=0, t;
-  for(t=0;t<256;t++) sum+=t*hist[t];
-  var sumB=0, wB=0, max=0, th=128;
-  for(t=0;t<256;t++){ wB+=hist[t]; if(!wB) continue; var wF=total-wB; if(!wF) break;
-    sumB+=t*hist[t]; var mB=sumB/wB, mF=(sum-sumB)/wF, bt=wB*wF*(mB-mF)*(mB-mF);
-    if(bt>max){ max=bt; th=t; } }
-  for(i=0,j=0;i<p.length;i+=4,j++){ var q=g[j]>th?255:0; p[i]=p[i+1]=p[i+2]=q; p[i+3]=255; }
-  x.putImageData(d,0,0); return src;
 }
 
 /* ====================== 書き出し・読み込み ====================== */
