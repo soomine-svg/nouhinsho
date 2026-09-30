@@ -168,7 +168,7 @@ body.withimg #imgPanel{display:flex}
 
 /* ===== 納品書プレビュー／印刷 ===== */
 #printArea{display:none}
-.sheet{width:190mm;margin:0 auto;background:#fff;color:#000;padding:4mm 0;
+.sheet{width:160mm;margin:0 auto;background:#fff;color:#000;padding:4mm 0;
   font-family:"Hiragino Mincho ProN","Yu Mincho",serif;font-size:11pt;line-height:1.5}
 .sheet .no{text-align:right;font-size:11pt;margin-bottom:2mm}
 .sheet .ttl{text-align:center;font-size:22pt;letter-spacing:1em;text-indent:1em;margin:0 0 3mm}
@@ -183,10 +183,10 @@ body.withimg #imgPanel{display:flex}
 table.nou{width:100%;border-collapse:collapse;font-size:10.5pt}
 table.nou th,table.nou td{border:1px solid #000;padding:1.3mm 2mm;height:7mm}
 table.nou th{text-align:center;font-weight:400}
-table.nou .c-no{width:9mm;text-align:center}
-table.nou .c-qty{width:16mm;text-align:right}
-table.nou .c-list{width:26mm;text-align:right}
-table.nou .c-amt{width:30mm;text-align:right}
+table.nou .c-no{width:8mm;text-align:center}
+table.nou .c-qty{width:13mm;text-align:right}
+table.nou .c-list{width:22mm;text-align:right}
+table.nou .c-amt{width:26mm;text-align:right}
 /* 請求書だけに出るもの */
 .sheet .billtotal{display:table;border-collapse:collapse;margin:0 0 3mm}
 .sheet .billtotal>div{display:table-cell;border:1px solid #000;padding:1.5mm 3mm;vertical-align:middle}
@@ -198,11 +198,11 @@ table.nou .c-amt{width:30mm;text-align:right}
 .sheet table.bankt td{border:1px solid #000;padding:1.2mm 5mm;text-align:center;white-space:nowrap}
 .sheet table.bankt td.k{width:26mm;letter-spacing:.5em;text-indent:.5em}
 table.nou .c-name{text-align:center}
-table.nou .c-memo{width:34mm;font-size:9pt;line-height:1.3;text-align:center}
+table.nou .c-memo{width:27mm;font-size:8.5pt;line-height:1.3;text-align:center}
 table.nou td.lbl{text-align:center}
 
 @media print{
-  @page{size:A4 portrait;margin:11mm}
+  @page{size:A4 portrait;margin:11mm 25mm}   /* 左右2.5cm（本人指定）・上下11mm */
   body{background:#fff}
   .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn{display:none !important}
   body.withimg{padding-left:0 !important}
@@ -823,7 +823,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-b';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-c';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1726,7 +1726,7 @@ function sheetHTML(){
    画面の見本は幅190mm・上下に4mmずつ余白があるので、その分を引いて見積もる。
    印刷時は幅が188mmと少し狭く、文字の折り返しでわずかに伸びることがあるので、
    268mm を超えたら「2枚になるかもしれない」と知らせる。 */
-var PAGE_MM=275, WARN_MM=268;
+var PAGE_MM=275, WARN_MM=268;   /* A4たて・上下11mm。左右は25mm（印刷できる幅160mm） */
 function sheetHeightMm(){
   var el=document.querySelector('#previewBox .sheet');
   if(!el) return 0;
