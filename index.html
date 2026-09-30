@@ -88,6 +88,13 @@ table.grid tr.miss td{background:#fdecec}
 .chk{display:flex;align-items:center;gap:10px;font-weight:700;cursor:pointer;font-size:18px}
 .chk input{width:22px;height:22px;cursor:pointer}
 td.ov input{background:#fff4e5;border-color:#ff9800;font-weight:700}
+.bstep{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--accent-d);
+  margin:22px 0 10px;padding-bottom:8px;border-bottom:2px solid var(--line)}
+.bstep .bn{background:var(--accent);color:#fff;width:30px;height:30px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.bstep .bnote{font-weight:400;font-size:14px;color:var(--sub)}
+.brow{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;margin-bottom:4px}
+.brow>div{display:flex;flex-direction:column}
 .picker{border:2px solid var(--line);border-radius:10px;padding:14px;background:#fafbfd}
 .picker h4{margin:0 0 8px;font-size:15px;color:var(--sub);font-weight:700}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
@@ -442,19 +449,24 @@ table.nou td.lbl{text-align:center}
   <div class="step">
     <h2><span class="n">D+</span>まとめて入れる（写真を見ながら）</h2>
     <div class="body">
-      <div class="hint">紙の卸率表や商品表を見ながら、まとめて入力できます。写真を読み込むと<b>画面の左に出たまま</b>になるので、紙と画面を往復せずに済みます。</div>
+      <div class="note" style="background:#eef2f7;border-color:#c9d2dd">
+        <b>写真を選んでも、自動では入りません。</b>下の①〜⑤を順に進めてください。
+        最後の⑤を押すまで、台帳は書きかわりません。
+      </div>
 
-      <div class="row">
+      <div class="bstep"><span class="bn">①</span>紙の表を写真で左に出す（省いてもかまいません）</div>
+      <div class="brow">
         <div>
-          <label>写真（iPhoneのHEICもそのまま使えます）</label>
+          <div class="hint" style="margin:0 0 8px">iPhoneのHEICもそのまま使えます。読み込むと画面の左に出たままになります。</div>
           <button class="btn sub" onclick="document.getElementById('bulkImg').click()">写真をえらんで左に出す</button>
           <input id="bulkImg" type="file" accept="image/*,.heic,.HEIC,.heif,.HEIF,.jpg,.JPG,.jpeg,.JPEG,.png,.PNG,.pdf,.PDF" multiple style="display:none" onchange="addImgs(this.files);this.value=''">
         </div>
       </div>
 
-      <div class="row" style="margin-top:6px">
+      <div class="bstep"><span class="bn">②</span>どこに入れるかを決める<span class="bnote">（えらぶだけです。まだ何も起きません）</span></div>
+      <div class="brow">
         <div style="flex:1;min-width:300px">
-          <label for="bulkWhere">どこに入れるか</label>
+          <label for="bulkWhere">入れる先</label>
           <select id="bulkWhere" class="big" style="width:100%" onchange="onBulkWhere()">
             <option value="partner">取引先（名前と卸率）</option>
             <option value="sub">お届け先（名前と卸率）</option>
@@ -467,14 +479,18 @@ table.nou td.lbl{text-align:center}
         </div>
       </div>
 
+      <div class="bstep"><span class="bn">③</span>中身を書く</div>
+      <div style="margin-bottom:10px">
+        <button class="btn sub" onclick="bulkOcr()" id="bulkOcrBtn">左の写真から読み取って下書きにする（当てになりません）</button>
+        <button class="btn sub" onclick="document.getElementById('bulkText').value='';document.getElementById('bulkTable').innerHTML=''">入力欄を消す</button>
+      </div>
       <label for="bulkText" id="bulkLabel">1行に1件ずつ書いてください</label>
       <div class="hint" id="bulkHelp"></div>
       <textarea id="bulkText" style="min-height:190px"></textarea>
 
-      <div style="margin-top:12px">
+      <div class="bstep" style="margin-top:20px"><span class="bn">④</span>確かめる</div>
+      <div style="margin-bottom:6px">
         <button class="btn" onclick="bulkPreview()">下の表で確かめる</button>
-        <button class="btn sub" onclick="bulkOcr()" id="bulkOcrBtn">左の写真から読み取って下書きにする</button>
-        <button class="btn sub" onclick="document.getElementById('bulkText').value='';document.getElementById('bulkTable').innerHTML=''">入力欄を消す</button>
       </div>
       <div id="bulkOcrProg" style="margin-top:12px;display:none">
         <div style="background:#dde5ee;border-radius:8px;height:16px;overflow:hidden"><div id="bulkBar" style="background:var(--accent);height:100%;width:0%;transition:width .2s"></div></div>
@@ -488,6 +504,7 @@ table.nou td.lbl{text-align:center}
       </div>
       <div id="bulkTable" style="margin-top:14px"></div>
       <div id="bulkMsg" class="msg"></div>
+      <div id="bulkStep5" class="hint" style="margin-top:10px">※ ⑤「台帳に足す」ボタンは、④で確かめたあとに、この下に出ます。</div>
     </div>
   </div>
 
@@ -626,7 +643,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-c';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-d';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1512,6 +1529,7 @@ function bulkPreview(){
              '</td><td class="num">'+(r.rate==null?'基本':r.rate+'％')+'</td></tr>';
     }).join('')+'</tbody></table>'+
     '<div style="margin-top:12px">'+
+      '<div class="bstep" style="margin-bottom:10px"><span class="bn">⑤</span>台帳に入れる<span class="bnote">（ここで初めて書きかわります）</span></div>'+
       '<button class="btn" onclick="bulkCommit(false)">この内容を台帳に足す（'+rows.filter(function(r){return r.ok;}).length+'件）</button> '+
       '<button class="btn danger" onclick="bulkCommit(true)">いまの中身を消して、これに入れ替える</button>'+
     '</div>';
