@@ -322,6 +322,8 @@ table.nou td.lbl{text-align:center}
           <h4 id="specTitle">② 大きさ・内容量をえらぶと、明細に入ります</h4>
           <div class="chips" id="chipSpecs"></div>
         </div>
+        <div id="addedMsg" style="display:none;background:#e8f5e9;border:2px solid #a5d6a7;color:#1b5e20;
+             border-radius:9px;padding:10px 14px;margin-top:12px;font-size:16px"></div>
       </div>
 
       <div id="pane-paste" class="pane">
@@ -761,6 +763,9 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>商品をたくさん入れるとき、画面が飛んでしまう</td><td><b>飛ばなくなりました。</b>商品を入れても画面は動きません。<br>
+            入れたものは、えらぶ場所のすぐ下に<b>緑の帯</b>で出ます（いま何件・合計いくらも出ます）。<br>
+            そのまま続けて次の商品をさがせます。明細を見たいときは、緑の帯の<b>「明細を見る」</b>を押してください。</td></tr>
           <tr><td>請求書をつくりたい</td><td>「4 日付と番号」の<b>「書類の種類」</b>で<b>請求書</b>をえらんでください。作り方は納品書とまったく同じです。<br>
             請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
             振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
@@ -813,7 +818,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-w';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-y';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1502,8 +1507,20 @@ function addPick(id){
                   memo:document.getElementById('inMemo').value.trim(), rate:null, miss:false});
   document.getElementById('inQty').value=1; document.getElementById('inMemo').value='';
   renderAll();
-  var w=document.getElementById('lineWrap');
-  if(w.firstChild) w.scrollIntoView({block:'nearest',behavior:'smooth'});
+  /* 画面は動かさない。商品が増えるほど明細が下に伸びて、押すたびに遠くへ飛ばされるため。
+     かわりに、いま入れたものを選ぶ場所のすぐ下で知らせる。 */
+  addedNote(pname(g), q);
+  var f=document.getElementById('inFind');
+  if(f){ f.focus(); f.select(); }
+}
+/* いま入れたものと、いまの合計を、選ぶ場所のすぐ下に出す */
+function addedNote(name, qty){
+  var el=document.getElementById('addedMsg'); if(!el) return;
+  var c=calc();
+  el.innerHTML='<b>「'+esc(name)+'」を '+qty+' 入れました。</b>'+
+    '　いま <b>'+cur.lines.length+' 件</b>／合計 <b>'+yen(c.total)+' 円</b>'+
+    '　<button class="btn sm sub" onclick="document.getElementById(\'lineWrap\').scrollIntoView({block:\'start\',behavior:\'smooth\'})">明細を見る</button>';
+  el.style.display='block';   /* 消さない。消えると、そのぶん下の明細が動いてしまうため */
 }
 function fillProductSelect(){ renderPicker(); }
 function addByHand(){
@@ -1515,6 +1532,8 @@ function addByHand(){
   document.getElementById('hName').value=''; document.getElementById('hPrice').value=0;
   document.getElementById('hQty').value=1; document.getElementById('hMemo').value='';
   renderAll();
+  addedNote(n, cur.lines[cur.lines.length-1].qty);
+  document.getElementById('hName').focus();
 }
 
 /* 発注書の貼りつけを読み取る */
