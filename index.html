@@ -187,9 +187,11 @@ table.nou{width:100%;border-collapse:collapse;font-size:10.5pt}
 table.nou th,table.nou td{border:1px solid #000;padding:1.3mm 2mm;height:7mm;line-height:1.2}
 table.nou th{text-align:center;font-weight:400}
 table.nou .c-no{width:9mm;text-align:center}
-table.nou .c-qty{width:15mm;text-align:center}
-table.nou .c-list{width:25mm;text-align:center}
-table.nou .c-amt{width:29mm;text-align:center}
+/* 数字が入るところは右揃え。見出し（数量・上代・金額）だけ中央。 */
+table.nou .c-qty{width:15mm;text-align:right}
+table.nou .c-list{width:25mm;text-align:right}
+table.nou .c-amt{width:29mm;text-align:right}
+table.nou th.c-qty,table.nou th.c-list,table.nou th.c-amt{text-align:center}
 /* 請求書だけに出るもの */
 .sheet .billtotal{display:table;border-collapse:collapse;margin:0 0 3mm}
 .sheet .billtotal>div{display:table-cell;border:1px solid #000;padding:1.5mm 3mm;vertical-align:middle}
@@ -831,7 +833,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-f';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-g';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
