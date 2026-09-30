@@ -73,7 +73,7 @@ table.grid th,table.grid td{border:1px solid var(--line);padding:8px 10px;text-a
 #lineWrap table.grid{min-width:1040px;table-layout:fixed}
 #lineWrap table.grid td:nth-child(2){word-break:break-word;min-width:230px}
 /* 幅指定の入力が並ぶ表は、fixed にしないと列幅が言うことをきかない */
-#gTable table.grid{min-width:1120px;table-layout:fixed}
+#gTable table.grid{min-width:1280px;table-layout:fixed}
 #gTable table.grid td{word-break:break-word}
 #pTable table.grid{min-width:1020px;table-layout:fixed}
 #pTable table.grid td{word-break:break-word}
@@ -112,6 +112,12 @@ td.ov input{background:#fff4e5;border-color:#ff9800;font-weight:700}
 .cat.closed>.catbody{display:none}
 .cat>h4 .cnt{font-size:13px;font-weight:400;color:var(--sub)}
 .catbody{padding:10px}
+.parts{display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.parts select,.parts input[type=text]{font-size:15px;padding:6px 8px;border:2px solid var(--line);border-radius:7px}
+.parts .pnum{width:62px;text-align:right}
+.parts .plab{display:flex;align-items:center;gap:4px;font-size:15px;font-weight:700;color:#41526a;
+  border:2px solid var(--line);border-radius:7px;padding:5px 8px;background:#fff;cursor:pointer}
+.parts .plab input{width:18px;height:18px;margin:0;cursor:pointer}
 .ordbtn{background:#eef2f7;border:1px solid var(--line);border-radius:6px;
   width:30px;height:26px;line-height:1;font-size:13px;color:#41526a;padding:0}
 .ordbtn:hover:not(:disabled){background:var(--soft);border-color:var(--accent)}
@@ -720,6 +726,9 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>色や長さを直したい</td><td>「③設定 → D」の<b>「色・大きさ・長さ」の欄</b>で、そのまま選び直せます。<br>
+            ネックレスは <b>色 / 数字 / 単位 / 追加 / 長さ</b> をそれぞれ選べます。長さの「その他…」で50cm・55cm以外も入れられます。<br>
+            選び直すとすぐ右の「印刷される品名」が変わるので、見ながら直してください。</td></tr>
           <tr><td>商品のカテゴリを変えたい</td><td>「③設定 → D」の各行にある<b>カテゴリの欄</b>でえらび直せます。あとからいつでも変えられます。<br>「まとめて入れる」で足すときは、②の「どのカテゴリに入れるか」でえらんでください。</td></tr>
           <tr><td>商品の並び順を変えたい</td><td>「③設定 → D」の各行の左にある <b>▲▼</b> で入れ替えられます。この順番が、納品書を作るときの並びにもなります。</td></tr>
           <tr><td>ネックレスの品名を入れたい</td><td>カテゴリで「ネックレス」をえらぶと、<b>色・数字・単位・「追加」・長さ</b>をえらぶ欄が出ます。<br>できあがる品名は入力欄の下に出るので、見ながら組み立ててください。（例：〇〇桃8P追加50cm）</td></tr>
@@ -756,7 +765,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-o';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-q';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -773,6 +782,36 @@ function pname(g){
   if(!g.spec) return g.group;
   return (g.cat===NECK) ? (g.group+g.spec) : (g.group+'　'+g.spec);
 }
+/* 「〇〇桃8P追加50cm」のように空白なしで書かれた1語を、
+   シリーズ名と大きさに切り分ける。
+   ・ネックレス … まず色（桃黒青白紺紫緑）の位置で切る。色が無ければ
+                   数字の位置で切る（ただし後ろに P・g・cm が続くときだけ）
+   ・それ以外   … 数字の位置で切る（後ろに文字の単位が付くときだけ。
+                   「マルダイ21」のような品番を切らないため）
+   切りどころが無ければ、全部をシリーズ名として返す。 */
+function splitNameSpec(cat, text){
+  var t=String(text==null?'':text).trim();
+  if(!t) return {name:'', spec:''};
+  function cut(i){
+    var nm=t.slice(0,i).trim(), sp=t.slice(i).trim();
+    return nm ? {name:nm, spec:sp} : {name:t, spec:''};
+  }
+  if(cat===NECK){
+    var best=-1;
+    for(var i=1;i<COLORS.length;i++){
+      var idx=t.indexOf(COLORS[i]);
+      if(idx>0 && (best<0 || idx<best)) best=idx;
+    }
+    if(best>0) return cut(best);
+  }
+  var m=t.match(/[0-9０-９]/);
+  if(m && m.index>0){
+    var tail=t.slice(m.index);
+    if(/[PpＰｐGgＧｇ]|cm|ｃｍ|CM|ＣＭ|ml|ｍｌ|ML|センチ/.test(tail)) return cut(m.index);
+  }
+  return {name:t, spec:''};
+}
+
 /* カテゴリごとの、単位の既定 */
 function defUnit(cat){ return cat===NECK ? 'P' : (cat==='化粧品' ? 'g' : ''); }
 
@@ -1840,8 +1879,9 @@ function renderProducts(){
         '<h4 onclick="toggleCat(\''+esc(cat).replace(/'/g,"&#39;")+'\')">'+esc(cat)+
           '<span class="cnt">'+items.length+' 件</span><span class="caret">▼</span></h4>'+
         '<div class="catbody"><table class="grid">'+
-        '<thead><tr><th style="width:74px">並び</th><th style="width:150px">カテゴリ</th><th>シリーズ（商品名）</th><th style="width:170px">大きさ・内容量</th>'+
-        '<th class="num" style="width:150px">上代（税抜）</th><th>印刷される品名</th><th style="width:76px"></th></tr></thead><tbody>'+
+        '<thead><tr><th style="width:74px">並び</th><th style="width:140px">カテゴリ</th><th style="width:auto">商品名</th>'+
+        '<th style="width:370px">色・大きさ・長さ</th>'+
+        '<th class="num" style="width:130px">上代（税抜）</th><th style="width:auto">印刷される品名</th><th style="width:70px"></th></tr></thead><tbody>'+
         items.map(function(g){
           var i=S.products.indexOf(g);
           var up=i>0, dn=i<S.products.length-1;
@@ -1851,7 +1891,7 @@ function renderProducts(){
               '<button class="ordbtn" onclick="moveG('+i+',1)"'+(dn?'':' disabled')+' title="下へ">▼</button></td>'+
           '<td>'+catSelectHtml(g)+'</td>'+
           '<td><input type="text" value="'+esc(g.group)+'" style="width:100%" onchange="upG(\''+g.id+'\',\'group\',this.value)"></td>'+
-          '<td><input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+g.id+'\',\'spec\',this.value)"></td>'+
+          '<td>'+specCellHtml(g)+'</td>'+
           '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
           '<td style="color:var(--sub)">'+esc(pname(g))+
             (need?'<br><span style="color:#e65100;font-size:13px;font-weight:700">※上代を入れてください</span>':'')+'</td>'+
@@ -1866,6 +1906,57 @@ function renderProducts(){
   if(c) c.innerHTML='（'+S.products.length+' 件'+(need?'／<span style="color:#e65100;font-weight:700">上代が空 '+need+' 件</span>':'')+'）';
   fillCatSelect(); fillProductSelect();
 }
+/* 表の中で、色・数字・単位・追加・長さをそれぞれ選べるようにする。
+   カテゴリによって出す欄を変える。 */
+function optList(vals, cur, labels){
+  if(cur && vals.indexOf(cur)<0) vals=vals.concat([cur]);   /* いま入っている値が一覧に無ければ足す */
+  return vals.map(function(v,i){
+    var lab=(labels&&labels[v]!==undefined)?labels[v]:(v||'―');
+    return '<option value="'+esc(v)+'"'+(v===cur?' selected':'')+'>'+esc(lab)+'</option>';
+  }).join('');
+}
+function specCellHtml(g){
+  var cat=g.cat||'その他', id=g.id;
+  var ch=function(k){ return 'onchange="upPart(\''+id+'\',\''+k+'\',this.value)"'; };
+
+  if(cat===NECK){
+    var colors=COLORS.slice();
+    return '<div class="parts">'+
+      '<select title="色" '+ch('color')+'>'+optList(colors, g.color||'', {'':'色なし'})+'</select>'+
+      '<input type="text" class="pnum" title="数字" value="'+esc(g.num||'')+'" placeholder="8" '+ch('num')+'>'+
+      '<select title="単位" '+ch('unit')+'>'+optList(['P','g',''], g.unit||'', {'':'単位なし'})+'</select>'+
+      '<label class="plab" title="追加"><input type="checkbox"'+(g.extra?' checked':'')+
+        ' onchange="upPart(\''+id+'\',\'extra\',this.checked)">追加</label>'+
+      '<select title="長さ" '+ch('length')+'>'+optList(['','50cm','55cm'], g.length||'', {'':'長さなし'})+
+        '<option value="__">その他…</option></select>'+
+    '</div>';
+  }
+  if(cat==='その他'){
+    return '<input type="text" value="'+esc(g.spec||'')+'" style="width:100%" onchange="upG(\''+id+'\',\'spec\',this.value)">';
+  }
+  return '<div class="parts">'+
+    '<input type="text" class="pnum" title="大きさ" value="'+esc(g.size||'')+'" placeholder="200" '+ch('size')+'>'+
+    '<select title="単位" '+ch('unit')+'>'+optList(['g','P','ml',''], g.unit||'', {'':'単位なし'})+
+      '<option value="__">その他…</option></select>'+
+  '</div>';
+}
+/* 部品を1つ直したら、品名を組み直す */
+function upPart(id,k,v){
+  var g=S.products.filter(function(x){return x.id===id;})[0]; if(!g) return;
+  if(v==='__'){
+    var n=prompt(k==='length'?'長さを入れてください（例：60cm）':'単位を入れてください（例：ml）', '');
+    if(n===null){ renderProducts(); return; }
+    v=String(n).trim();
+  }
+  if(k==='extra') g.extra=(v===true||v==='true');
+  else g[k]=v;
+  var cat=g.cat||'その他';
+  g.spec = (cat===NECK)
+    ? buildSpec(cat,{color:g.color,num:g.num,unit:g.unit,extra:g.extra,length:g.length})
+    : buildSpec(cat,{size:g.size,unit:g.unit});
+  save(); renderProducts(); renderAll();
+}
+
 /* 各行のカテゴリ選択。あとからでも変えられる。 */
 function catSelectHtml(g){
   var cur=g.cat||'その他';
@@ -1900,19 +1991,27 @@ function renormalizeAll(){
   if(!S.products.length){ flash('gMsg','商品が入っていません。',false); return; }
   var plan=[];
   S.products.forEach(function(g){
-    var nz=normalizeSpec(g.cat||'その他', g.spec);
-    if(nz.spec!==(g.spec||'')) plan.push({g:g, before:pname(g), spec:nz.spec, parts:nz.parts||{}});
+    var cat=g.cat||'その他', group=g.group, spec=g.spec||'';
+    /* 大きさが空で、シリーズ名の中に大きさが埋もれているなら切り分ける */
+    if(!spec){
+      var sp=splitNameSpec(cat, group);
+      if(sp.spec){ group=sp.name; spec=sp.spec; }
+    }
+    var nz=normalizeSpec(cat, spec);
+    if(nz.spec!==(g.spec||'') || group!==g.group){
+      plan.push({g:g, before:pname(g), group:group, spec:nz.spec, parts:nz.parts||{}});
+    }
   });
   if(!plan.length){ flash('gMsg','整え直すところはありませんでした。すべてきまりどおりです。',true); return; }
   var list=plan.slice(0,12).map(function(x){
-    var t={cat:x.g.cat, group:x.g.group, spec:x.spec};
+    var t={cat:x.g.cat, group:x.group, spec:x.spec};
     return '　・'+x.before+'  →  '+pname(t);
   }).join('\n');
   if(!confirm(plan.length+' 件の大きさを整え直します。\n\n'+list+
       (plan.length>12?'\n　…ほか '+(plan.length-12)+' 件':'')+'\n\nよろしいですか？')) return;
   plan.forEach(function(x){
     var g=x.g, pp=x.parts;
-    g.spec=x.spec;
+    g.group=x.group; g.spec=x.spec;
     if((g.cat||'')===NECK){ g.color=pp.color||''; g.num=pp.num||''; g.unit=pp.unit||''; g.extra=!!pp.extra; g.length=pp.length||''; }
     else { g.size=pp.size||''; g.unit=pp.unit||''; }
   });
@@ -2015,12 +2114,14 @@ function bulkParse(){
       if(/^[0-9]+$/.test(lastTok)){ price=parseInt(lastTok,10); t=t.slice(0,-1); }
       var bcat0=(document.getElementById('bulkCat')||{}).value||'その他';
       if(bcat0===NECK){
-        /* ネックレスは「色 6 追加 55」のように空白で分かれて書かれる。
-           最初の語をシリーズ名、残りをまとめて大きさとして扱う。 */
-        name=t[0]||''; spec=t.slice(1).join(' ');
+        /* 「〇〇桃8P追加50cm」と続けて書かれることも、
+           「〇〇 黒 6 55」と分けて書かれることもある。
+           いったん全部つなげてから、色や数字の位置で切り分ける。 */
+        var sp1=splitNameSpec(NECK, t.join(' '));
+        name=sp1.name; spec=sp1.spec;
       }
       else if(t.length>=2){ spec=t[t.length-1]; name=t.slice(0,-1).join('　'); }
-      else { name=t.join('　'); }
+      else { var sp2=splitNameSpec(bcat0, t[0]||''); name=sp2.name; spec=sp2.spec; }
       /* 大きさの文字を読みほどいて、手入力と同じ形に整える */
       var nz=normalizeSpec(bcat0, spec);
       /* 直した下書きが正。名前さえあれば取り込み、上代が無い分はあとで入れてもらう */
