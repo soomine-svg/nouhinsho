@@ -853,10 +853,12 @@ table.nou td.lbl{text-align:center}
             直したら「<b>出した書類に保存する</b>」を押します。<b>同じ伝票番号のまま差し替わります</b>（番号は進みません）。<br>
             直した内容は、<b>合計請求書の集計にもそのまま反映されます。</b><br>
             やめたいときは、紫の帯の「やめる」を押してください。もとの書類はそのまま残ります。</td></tr>
-          <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td>「4 日付と番号」の「書類の種類」で<b>合計請求書</b>をえらびます。<br>
-            ① 取引先をえらぶ → ② 対象の月をえらぶ → その月に出した納品書・請求書が一覧に出ます。<br>
-            入れたくないものはチェックを外せます。日付・伝票番号・金額・消費税・摘要（お届け先）・合計が、そのまま表に並びます。<br>
-            <b>⚠ 「出した書類に保存する」を押していないものは出てきません。</b>作るたびに保存しておいてください。</td></tr>
+          <tr><td>1か月分をまとめた合計請求書をつくりたい</td><td><b>いつもの流れはこうです。</b><br>
+            ① 請求書をつくる　② 印刷する（PDFで保存する）　③ <b>「出した書類に保存する」を押す</b>　…これを月内くり返す<br>
+            ④ 月末に「書類の種類」を<b>合計請求書</b>にする　⑤ 取引先をえらぶ　⑥ その月の分が一覧に出る<br><br>
+            <b>⚠ ③を押していないものは出てきません。</b>印刷しただけでは保存されません。<br>
+            何月分かは<b>請求日（納品日）</b>で決まります。月がずれているだけなら、<b>書類のある月に自動で合わせます。</b><br>
+            一覧に出たら、入れたくないものはチェックを外せます。</td></tr>
           <tr><td>請求書をつくりたい</td><td>「4 日付と番号」の<b>「書類の種類」</b>で<b>請求書</b>をえらんでください。作り方は納品書とまったく同じです。<br>
             請求書だけ、表の上に<b>「合計請求額」</b>、表の下に<b>振込先</b>が出ます。<br>
             振込先は「③設定 → A 自分の会社の情報」に入れておきます（納品書には出ません）。<br>
@@ -909,7 +911,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-m';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-01-p';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1848,13 +1850,12 @@ function checkPageFit(){
 }
 
 /* ====================== 合計請求書（1か月分をまとめる） ====================== */
-var mtPick={};     /* えらんだ請求書の id */
+var mtPick={};          /* えらんだ請求書の id */
+var mtAutoTried=false;  /* 月を自動で合わせるのは1回だけ */
 function initMatomeMonth(){
   var el=document.getElementById('mtMonth');
-  if(!el.value){
-    var d=document.getElementById('inDate').value || new Date().toISOString().slice(0,10);
-    el.value=d.slice(0,7);
-  }
+  el.value=docPeriod();      /* いつも「請求日の月」に合わせる */
+  mtAutoTried=false;         /* 開き直すたびに、自動合わせをやり直せるようにする */
   renderMatome();
 }
 /* えらんだ取引先・月に出した「請求書」を、日付順に集める */
@@ -1863,8 +1864,7 @@ function matomeRows(){
   var ym=(document.getElementById('mtMonth')||{}).value||'';
   /* 納品書も請求書も同じ伝票番号の列なので、両方まとめる（合計請求書そのものは除く） */
   return S.history.filter(function(h){
-    return (h.kind==='sei'||h.kind==='nou') && (h.partnerId===p.id || h.partner===p.name)
-        && String(h.date||'').slice(0,7)===ym;
+    return (h.kind==='sei'||h.kind==='nou') && sameP(h,p) && recPeriod(h)===ym;
   }).sort(function(a,b){
     var d=String(a.date).localeCompare(String(b.date));
     return d!==0 ? d : String(a.no).localeCompare(String(b.no), 'ja', {numeric:true});
@@ -1879,11 +1879,39 @@ function mtNums(h){
 }
 function renderMatome(){
   var w=document.getElementById('mtList'); if(!w) return;
+  var ym=(document.getElementById('mtMonth')||{}).value||'';
   var rows=matomeRows();
-  if(!getPartner()){ w.innerHTML='<div class="empty">さきに「1 お届け先をえらぶ」で取引先をえらんでください。</div>'; renderSheet(); return; }
+  if(!getPartner()){
+    w.innerHTML='<div class="empty"><b>さきに「1 お届け先をえらぶ」で取引先をえらんでください。</b><br>'+
+      '取引先をえらぶと、その取引先に出した納品書・請求書がここに並びます。</div>';
+    renderSheet(); return;
+  }
   if(!rows.length){
-    w.innerHTML='<div class="empty">この月に出した請求書の記録がありません。<br>'+
-      '請求書をつくったあと「出した書類に保存する」を押しておくと、ここに出ます。</div>';
+    /* その取引先の保存済みが、どの月にあるかを調べる */
+    var p2=getPartner(), months={};
+    S.history.forEach(function(h){
+      if((h.kind==='sei'||h.kind==='nou') && sameP(h,p2)) months[recPeriod(h)]=(months[recPeriod(h)]||0)+1;
+    });
+    var keys=Object.keys(months).sort().reverse();
+    /* 月がずれているだけなら、いちばん新しい月へ自動で合わせる（空の画面を見せない） */
+    if(keys.length && !mtAutoTried){
+      mtAutoTried=true;
+      document.getElementById('mtMonth').value=keys[0];
+      renderMatome();
+      flash('mtMsg','この取引先の書類は「'+esc(keys[0])+'」に入っていたので、その月に合わせました。', true);
+      return;
+    }
+    w.innerHTML='<div class="empty" style="text-align:left">'+
+      '<b>'+esc(p2.name)+'</b> の「'+esc(ym)+'」の書類は、まだ保存されていません。<br><br>'+
+      (keys.length
+        ? 'この取引先で保存されているのは、次の月です。押すとその月に移ります。<br>'+
+          '<div style="margin-top:10px">'+keys.map(function(k){
+            return '<button class="btn sub sm" style="margin:0 6px 6px 0" onclick="mtGo(\''+k+'\')">'+esc(k)+'（'+months[k]+'件）</button>';
+          }).join('')+'</div>'+
+          '<div class="hint" style="margin-top:10px">※ 何月分かは「<b>請求日（納品日）</b>」で決まります。伝票番号の月ではありません。</div>'
+        : '<b>この取引先の納品書・請求書が1件も保存されていません。</b><br>'+
+          '納品書や請求書をつくったあと、<b>「出した書類に保存する」</b>を押してください。押さないとここに出ません。')+
+      '</div>';
     renderSheet(); return;
   }
   rows.forEach(function(h){ if(mtPick[h.id]===undefined) mtPick[h.id]=true; });
@@ -1902,6 +1930,7 @@ function renderMatome(){
     '<div class="totals"><table><tr class="sum"><td>えらんだ分の合計</td><td style="text-align:right">'+yen(sum)+' 円</td></tr></table></div>';
   renderSheet();
 }
+function mtGo(ym){ mtAutoTried=true; document.getElementById('mtMonth').value=ym; renderMatome(); }
 function mtToggle(id,v){ mtPick[id]=v; renderMatome(); }
 function mtAll(v){ matomeRows().forEach(function(h){ mtPick[h.id]=v; }); renderMatome(); }
 function mtDateLabel(iso){
@@ -1991,7 +2020,7 @@ function doPrint(){
     renderSheet();
     var mmH=sheetHeightMm();
     if(mmH>WARN_MM){ if(!confirm('⚠ A4の1枚に収まらないかもしれません。\n　いまの高さ：約'+mmH+'mm\n\nこのまま印刷しますか？')) return; }
-    window.print(); return;
+    window.print(); saveReminder(); return;
   }
   if(!cur.lines.length){ flash('printMsg','さきに商品を入れてください。',false); return; }
   var ng=cur.lines.filter(function(l){return l.qchk;});
@@ -2013,6 +2042,15 @@ function doPrint(){
       '2枚に分かれて印刷されることがあります。\nこのまま印刷しますか？')) return;
   }
   window.print();
+  saveReminder();
+}
+/* 印刷しただけでは合計請求書に出ないので、消えない案内を出す */
+function saveReminder(){
+  if(editingId) return;
+  var e=document.getElementById('printMsg');
+  e.className='msg ng';
+  e.innerHTML='印刷しました。<b>つづけて「出した書類に保存する」を押してください。</b><br>'+
+    '押さないと、この書類は合計請求書に出てきません。';
 }
 function saveHistory(){
   if(!getPartner()){ flash('printMsg','さきに取引先をえらんでください。',false); return; }
@@ -2039,6 +2077,7 @@ function saveHistory(){
     kind:docKind(), kindName:kindName(),
     partner:p.name, partnerId:p.id, sub:s?s.name:'', subId:cur.subId||'', rate:c.rate, mixed:c.mixed,
     subAmount:c.subAmount, tax:c.tax, taxRate:c.taxRate, total:c.total, html:sheetHTML(),
+    period:docPeriod(),
     /* あとで直せるように、作ったときの中身をそのまま残す */
     lines:JSON.parse(JSON.stringify(cur.lines)),
     notes:document.getElementById('txtNotes').value,
@@ -2180,6 +2219,13 @@ function fillMonthSelect(){
   }
 }
 function onMonthChange(){ if(!editingId) document.getElementById('inNo').value=nextNo(); renderSheet(); }
+/* 「何月分の書類か」は【請求日・納品日】で決める（2026-10-01 本人指示）。
+   伝票番号の月（9-3 の 9）は番号の付け方だけに使い、集計には使わない。 */
+function docPeriod(){
+  var d=document.getElementById('inDate').value||'';
+  return d? d.slice(0,7) : new Date().toISOString().slice(0,7);
+}
+function recPeriod(h){ return String(h.date||'').slice(0,7); }
 function nextNo(){
   var p=getPartner();
   if(!p) return '';
