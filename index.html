@@ -81,6 +81,7 @@ table.grid th{background:#eef2f7;font-size:15px;white-space:nowrap}
 table.grid td.num,table.grid th.num{text-align:right;white-space:nowrap}
 table.grid tr.miss td{background:#fdecec}
 table.grid tr.needval td{background:#fff8e1}
+table.grid tr.dup td{background:#fdecec}
 table.grid tr.needval input[type=number]{border-color:#ffa000;background:#fffdf5;font-weight:700}
 .empty{color:var(--sub);text-align:center;padding:26px;background:#fafbfd;border:2px dashed var(--line);border-radius:10px}
 
@@ -726,6 +727,12 @@ table.nou td.lbl{text-align:center}
             写真から取り込んだものも、台帳で打ち直したものも、同じように整います。</td></tr>
           <tr><td>上代や卸率がまだ分からない</td><td><b>空のままでも取り込めます。</b>直した下書きのとおりに入ります。<br>取り込んだあと、台帳のその行が<b>黄色</b>になり、見出しに「上代が空 ○件」と出るので、あとから数字を入れてください。</td></tr>
           <tr><td>写真から作った下書きを直したい</td><td>入力欄でそのまま直してください。<b>直すたびに、下の表は自動で作り直されます。</b>ボタンを押し直す必要はありません。<br>作り直している間、表は薄くなり「直した内容を読み込んでいます…」と出ます。表が濃くなってから⑤を押してください。</td></tr>
+          <tr><td>同じ商品を二重に登録していないか心配</td><td><b>同じ品名があると知らせます。</b><br>
+            ・手で足すとき … 「すでに台帳にあります」と出て、すでにある分の上代も見せます。<br>
+            ・まとめて入れるとき … 確認表でその行が<b>赤</b>になり、取り込む前に「足すか／飛ばすか」を聞きます。<br>
+            ・台帳で直したとき … 同じ品名になったら、その場で知らせます。<br>
+            <b>止めはしません。</b>同じ品名を上代ちがいで2つ持つことがあるためです。
+            台帳の見出しに「品名の重なり ○件」と出て、その行には「⚠ 同じ品名が○件あります」と付きます。</td></tr>
           <tr><td>色や長さを直したい</td><td>「③設定 → D」の<b>「色・大きさ・長さ」の欄</b>で、そのまま選び直せます。<br>
             ネックレスは <b>色 / 数字 / 単位 / 追加 / 長さ</b> をそれぞれ選べます。長さの「その他…」で50cm・55cm以外も入れられます。<br>
             選び直すとすぐ右の「印刷される品名」が変わるので、見ながら直してください。</td></tr>
@@ -765,7 +772,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-09-30-q';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-09-30-r';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1872,6 +1879,7 @@ function renderProducts(){
   }else{
     var order=[];
     S.products.forEach(function(g){ var c=g.cat||'その他'; if(order.indexOf(c)<0) order.push(c); });
+    var dc=dupCounts();
     w.innerHTML = order.map(function(cat){
       var items=S.products.filter(function(g){ return (g.cat||'その他')===cat; });
       var closed = !!UI.cats[cat];
@@ -1886,6 +1894,7 @@ function renderProducts(){
           var i=S.products.indexOf(g);
           var up=i>0, dn=i<S.products.length-1;
           var need=!(Number(g.price)>0);
+          var dupN=dc[dupKey(g)]||0;
           return '<tr class="'+(need?'needval':'')+'">'+
           '<td><button class="ordbtn" onclick="moveG('+i+',-1)"'+(up?'':' disabled')+' title="上へ">▲</button> '+
               '<button class="ordbtn" onclick="moveG('+i+',1)"'+(dn?'':' disabled')+' title="下へ">▼</button></td>'+
@@ -1894,6 +1903,7 @@ function renderProducts(){
           '<td>'+specCellHtml(g)+'</td>'+
           '<td class="num"><input type="number" value="'+g.price+'" style="width:130px;text-align:right" onchange="upG(\''+g.id+'\',\'price\',this.value)"></td>'+
           '<td style="color:var(--sub)">'+esc(pname(g))+
+            (dupN>1?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ 同じ品名が '+dupN+' 件あります</span>':'')+
             (need?'<br><span style="color:#e65100;font-size:13px;font-weight:700">※上代を入れてください</span>':'')+'</td>'+
           '<td><button class="btn danger sm" onclick="delG(\''+g.id+'\')">削除</button></td></tr>';
         }).join('')+'</tbody></table></div></div>';
@@ -1902,10 +1912,37 @@ function renderProducts(){
   var gs=[]; S.products.forEach(function(g){ if(gs.indexOf(g.group)<0) gs.push(g.group); });
   document.getElementById('groupList').innerHTML=gs.map(function(n){return '<option value="'+esc(n)+'">';}).join('');
   var need=S.products.filter(function(g){return !(Number(g.price)>0);}).length;
+  var dcx=dupCounts(), dupTotal=0;
+  Object.keys(dcx).forEach(function(k){ if(dcx[k]>1) dupTotal+=dcx[k]; });
   var c=document.getElementById('cntD');
-  if(c) c.innerHTML='（'+S.products.length+' 件'+(need?'／<span style="color:#e65100;font-weight:700">上代が空 '+need+' 件</span>':'')+'）';
+  if(c) c.innerHTML='（'+S.products.length+' 件'+
+    (need?'／<span style="color:#e65100;font-weight:700">上代が空 '+need+' 件</span>':'')+
+    (dupTotal?'／<span style="color:#c62828;font-weight:700">品名の重なり '+dupTotal+' 件</span>':'')+'）';
   fillCatSelect(); fillProductSelect();
 }
+/* 同じ品名がすでに台帳にあるか調べる。
+   「〇〇　桃8P」と「〇〇桃8P」のような空白の違いは
+   同じものとして扱う（norm で空白などを落として比べる）。 */
+function dupKey(o){ return norm(pname(o)); }
+function findDups(cat, group, spec, exceptId){
+  var k=dupKey({cat:cat, group:group, spec:spec});
+  if(!k) return [];
+  return S.products.filter(function(x){
+    return x.id!==exceptId && dupKey(x)===k;
+  });
+}
+/* いま台帳の中で重なっている品名の一覧 */
+function dupCounts(){
+  var m={};
+  S.products.forEach(function(g){ var k=dupKey(g); if(!k) return; m[k]=(m[k]||0)+1; });
+  return m;
+}
+function dupNote(list){
+  return list.map(function(x){
+    return '　・'+pname(x)+'（'+(x.cat||'その他')+'／上代 '+(Number(x.price)>0?yen(x.price)+'円':'未入力')+'）';
+  }).join('\n');
+}
+
 /* 表の中で、色・数字・単位・追加・長さをそれぞれ選べるようにする。
    カテゴリによって出す欄を変える。 */
 function optList(vals, cur, labels){
@@ -1940,6 +1977,15 @@ function specCellHtml(g){
       '<option value="__">その他…</option></select>'+
   '</div>';
 }
+/* 直した結果、同じ品名ができていないか見て知らせる */
+function warnDupAfterEdit(g){
+  var d=findDups(g.cat||'その他', g.group, g.spec, g.id);
+  if(d.length){
+    flash('gMsg','⚠ 「'+esc(pname(g))+'」は、いま台帳に '+(d.length+1)+' 件あります。'+
+      '上代ちがいで持つならこのままで構いません。要らないほうは「削除」してください。', false);
+  }
+}
+
 /* 部品を1つ直したら、品名を組み直す */
 function upPart(id,k,v){
   var g=S.products.filter(function(x){return x.id===id;})[0]; if(!g) return;
@@ -1954,7 +2000,7 @@ function upPart(id,k,v){
   g.spec = (cat===NECK)
     ? buildSpec(cat,{color:g.color,num:g.num,unit:g.unit,extra:g.extra,length:g.length})
     : buildSpec(cat,{size:g.size,unit:g.unit});
-  save(); renderProducts(); renderAll();
+  save(); renderProducts(); renderAll(); warnDupAfterEdit(g);
 }
 
 /* 各行のカテゴリ選択。あとからでも変えられる。 */
@@ -2038,6 +2084,7 @@ function upG(id,k,v){
   }
   else { g[k]=v; }
   save(); renderProducts();
+  if(k==='group'||k==='spec') warnDupAfterEdit(g);
 }
 function delG(id){
   var g=S.products.filter(function(x){return x.id===id;})[0];
@@ -2048,8 +2095,12 @@ function addProduct(){
   var n=document.getElementById('gGroup').value.trim();
   if(!n){ alert('シリーズ（商品名）を入れてください。'); return; }
   var parts=gParts(), cat=parts.cat, sp=buildSpec(cat,parts);
-  if(S.products.some(function(x){return x.group===n && (x.spec||'')===sp && (x.cat||'その他')===cat;})){
-    alert('「'+pname({cat:cat,group:n,spec:sp})+'」はすでに台帳にあります。'); return;
+  var dups=findDups(cat, n, sp, null);
+  if(dups.length){
+    if(!confirm('⚠ 同じ品名がすでに台帳にあります。\n\n'+
+      '　いま足そうとしているもの：'+pname({cat:cat,group:n,spec:sp})+'\n\n'+
+      '　すでにあるもの：\n'+dupNote(dups)+'\n\n'+
+      '上代ちがいで2つ持つこともあります。\nこのまま足しますか？')) return;
   }
   var g={id:'g'+Date.now(), cat:cat, group:n, spec:sp, price:Number(document.getElementById('gPrice').value)||0};
   if(cat===NECK){ g.color=parts.color; g.num=parts.num; g.unit=parts.unit; g.extra=parts.extra; g.length=parts.length; }
@@ -2176,7 +2227,12 @@ function bulkPreview(){
       var later='<span style="color:#e65100;font-weight:700">あとで入れる</span>';
       if(k==='product'){
         var changed = r.specRaw && r.spec!==r.specRaw;
-        return '<tr class="'+cls+'"><td>'+mark+'</td><td>'+esc(r.name)+'</td><td>'+esc(r.spec)+
+        var bc=(document.getElementById('bulkCat')||{}).value||'その他';
+        var dd=r.ok ? findDups(bc, r.name, r.spec, null) : [];
+        if(dd.length && !cls) cls='dup';
+        return '<tr class="'+cls+'"><td>'+mark+'</td><td>'+esc(r.name)+
+               (dd.length?'<br><span style="color:#c62828;font-size:13px;font-weight:700">⚠ すでに台帳にあります</span>':'')+
+               '</td><td>'+esc(r.spec)+
                (changed?'<br><span style="color:var(--sub);font-size:13px">（書いたのは「'+esc(r.specRaw)+'」）</span>':'')+
                '</td><td class="num">'+(r.price==null?later:yen(r.price))+'</td></tr>';
       }
@@ -2189,7 +2245,13 @@ function bulkPreview(){
       '<button class="btn danger" onclick="bulkCommit(true)">いまの中身を消して、これに入れ替える</button>'+
     '</div>';
   var later=rows.filter(function(r){return r.ok && r.later;}).length;
+  var dupN=0;
+  if(k==='product'){
+    var bc2=(document.getElementById('bulkCat')||{}).value||'その他';
+    dupN=rows.filter(function(r){ return r.ok && findDups(bc2, r.name, r.spec, null).length; }).length;
+  }
   var m='';
+  if(dupN) m+='⚠ すでに台帳にある品名が '+dupN+' 行あります（赤い行）。';
   if(ng)    m+='✕ の '+ng+' 行は名前が読み取れないため取り込まれません。直してください。';
   if(later) m+=(k==='product'?'上代':'卸率')+'が無い行が '+later+' 行あります。そのまま取り込めますが、'+
                '取り込んだあと下の台帳が黄色くなるので、'+(k==='product'?'上代':'卸率')+'を入れてください。';
@@ -2214,7 +2276,7 @@ function bulkCommit(replace){
     : where+'に '+rows.length+'件 を足します。よろしいですか？';
   if(!confirm(msg)) return;
 
-  var t=Date.now(), n=0;
+  var t=Date.now(), n=0, skipDup=false, skipped=0;
   if(k==='partner'){
     if(replace){ S.partners=[]; cur.partnerId=''; cur.subId=''; }
     rows.forEach(function(r){
@@ -2228,8 +2290,17 @@ function bulkCommit(replace){
     rows.forEach(function(r){ p.subs.push({id:'s'+(t+(n++)), name:r.name, rate:r.rate}); });
   }else{
     if(replace) S.products=[];
+    var dupRows=rows.filter(function(r){ return findDups(bcat, r.name, r.spec, null).length; });
+    if(dupRows.length && !replace){
+      var ans=confirm('⚠ すでに台帳にある品名が '+dupRows.length+' 件ふくまれています。\n\n'+
+        dupRows.slice(0,10).map(function(r){ return '　・'+pname({cat:bcat,group:r.name,spec:r.spec}); }).join('\n')+
+        (dupRows.length>10?'\n　…ほか '+(dupRows.length-10)+' 件':'')+'\n\n'+
+        '【OK】重なっている分も足す（上代ちがいで2つ持つとき）\n'+
+        '【キャンセル】重なっている分は飛ばして、残りだけ足す');
+      if(!ans) skipDup=true;
+    }
     rows.forEach(function(r){
-      if(S.products.some(function(x){return x.group===r.name && (x.spec||'')===r.spec;})) return;
+      if(skipDup && findDups(bcat, r.name, r.spec, null).length){ skipped++; return; }
       var np={id:'g'+(t+(n++)), cat:bcat, group:r.name, spec:r.spec, price:(r.price==null?0:r.price)};
       var pp=r.parts||{};
       if(bcat===NECK){ np.color=pp.color||''; np.num=pp.num||''; np.unit=pp.unit||''; np.extra=!!pp.extra; np.length=pp.length||''; }
@@ -2240,7 +2311,8 @@ function bulkCommit(replace){
   save(); renderMaster(); onBulkWhere(); onPartner(); renderAll();
   document.getElementById('bulkText').value=''; document.getElementById('bulkTable').innerHTML='';
   var lt=rows.filter(function(r){return r.later;}).length;
-  flash('bulkMsg', where+'に '+rows.length+'件 取り込みました。'+
+  flash('bulkMsg', where+'に '+(rows.length-skipped)+'件 取り込みました。'+
+    (skipped? '（すでにあった '+skipped+' 件は飛ばしました）' : '')+
     (lt? 'うち '+lt+' 件は'+(k==='product'?'上代':'卸率')+'が空のままです。台帳で黄色くなっているので、数字を入れてください。' :
          '上の台帳で中身を確かめてください。'), !lt);
 }
