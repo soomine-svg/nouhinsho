@@ -416,7 +416,9 @@ table.nou td.lbl{text-align:center}
 
         <div id="ocrBox" class="picker" style="margin-top:16px;display:none">
           <h4>文字を読み取る</h4>
-          <button class="btn" id="ocrBtn" onclick="runOcr()">いま左に出ている発注書の文字を読み取る</button>
+          <button class="btn" id="aiBtn" onclick="runAi()">AIで読み取る（おすすめ）</button>
+          <!-- 予備（AIなし・Tesseract）。友人が迷うので非表示（2026-10-02 本人指示）。機能は残してある -->
+          <button class="btn sub" id="ocrBtn" onclick="runOcr()" style="display:none">AIを使わずに読み取る</button>
           <div id="ocrProg" style="margin-top:12px;display:none">
             <div style="background:#dde5ee;border-radius:8px;height:16px;overflow:hidden">
               <div id="ocrBar" style="background:var(--accent);height:100%;width:0%;transition:width .2s"></div>
@@ -425,7 +427,7 @@ table.nou td.lbl{text-align:center}
           </div>
           <div class="hint" style="margin-top:10px">
             読み取った文字は「発注書を貼りつける」の欄に入ります。<b>かならず目で見て直してから</b>明細に入れてください。<br>
-            ※ きれいな印刷ならよく読めますが、<b>手書きや、かすれたFAXは正しく読めません。</b>数字の読みちがいに気をつけてください。
+            ※ 「AIで読み取る」は、画像をインターネットの向こうの AI（Claude）に送って読ませます。手書きや表の数量も読めますが、<b>まちがえることはあります。</b>はじめて押したときだけパスワードをたずねます。
           </div>
         </div>
 
@@ -707,7 +709,8 @@ table.nou td.lbl{text-align:center}
 
       <div class="bstep"><span class="bn">③</span>中身を書く</div>
       <div style="margin-bottom:10px">
-        <button class="btn sub" onclick="bulkOcr()" id="bulkOcrBtn">左の写真から読み取って下書きにする（当てになりません）</button>
+        <button class="btn sub" onclick="bulkAi()" id="bulkAiBtn">左の写真をAIで読み取って下書きにする</button>
+        <button class="btn sub" onclick="bulkOcr()" id="bulkOcrBtn" style="display:none">AIを使わずに読み取る（当てになりません）</button>
         <button class="btn sub" onclick="document.getElementById('bulkText').value='';document.getElementById('bulkTable').innerHTML=''">入力欄を消す</button>
       </div>
       <label for="bulkText" id="bulkLabel">1行に1件ずつ書いてください</label>
@@ -958,7 +961,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-01-zd';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-02-c';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1312,6 +1315,99 @@ function runOcr(){
     flash('imgMsg','読み取れませんでした（'+e.message+'）。ネットにつながっているか確かめるか、下の「パソコンの機能を使う方法」をお試しください。',false);
   }).then(function(){
     btn.disabled=false; btn.textContent='いま左に出ている発注書の文字を読み取る';
+  });
+}
+
+/* ====================== AIで読み取る（Claude） ======================
+   画像を中継役（Cloudflare）に送り、そこから Claude に読ませる。
+   Claude の鍵は中継役にだけある。このページが持つのはパスワードだけ（このブラウザに保存）。
+   中継役のプログラム＝非公開 repo soomine-svg/nouhinsho-ai */
+var AI_URL='https://nouhinsho-ai.s-oomine.workers.dev';
+var KEY_AIPASS=KEY+'_aipass';
+function aiPass(ask){
+  var p='';
+  try{ p=localStorage.getItem(KEY_AIPASS)||''; }catch(e){}
+  if(p && !ask) return p;
+  p=(prompt('AIで読み取るための「パスワード」を入れてください。\n（はじめの1回だけです。このパソコンに覚えておきます）')||'').trim();
+  if(p){ try{ localStorage.setItem(KEY_AIPASS,p); }catch(e){} }
+  return p;
+}
+/* 向きを直し、長い辺を2000pxまでに縮めて JPEG にする（送る量を減らすため。文字は十分読める大きさ） */
+function imgForAi(url, rotate){
+  return uprightForOcr(url, rotate).then(function(c){
+    var sc=Math.min(1, 2000/Math.max(c.width,c.height));
+    if(sc<1){
+      var b=document.createElement('canvas'); b.width=Math.round(c.width*sc); b.height=Math.round(c.height*sc);
+      var bx=b.getContext('2d'); bx.imageSmoothingQuality='high'; bx.drawImage(c,0,0,b.width,b.height); c=b;
+    }
+    return c.toDataURL('image/jpeg',0.9).split(',')[1];
+  });
+}
+function callAi(kind, extra){
+  var f=imgs[imgIdx];
+  if(f.pdf) return Promise.reject(new Error('PDFはそのままでは読み取れません。画像（JPEG）で保存しなおしてください'));
+  var pass=aiPass(false);
+  if(!pass) return Promise.reject(new Error('パスワードが入っていません'));
+  return imgForAi(f.url, rot).then(function(b64){
+    var body={kind:kind, image:b64, media_type:'image/jpeg'};
+    for(var k in (extra||{})) body[k]=extra[k];
+    return fetch(AI_URL,{method:'POST', headers:{'Content-Type':'application/json','X-Aikotoba':pass}, body:JSON.stringify(body)});
+  }).then(function(r){
+    return r.json().catch(function(){ return {error:'中継役から返事がありません（'+r.status+'）'}; }).then(function(j){
+      if(r.status===401){ try{ localStorage.removeItem(KEY_AIPASS); }catch(e){} }
+      if(!r.ok || j.error) throw new Error(j.error||('エラー '+r.status));
+      return j;
+    });
+  });
+}
+function clean(s){ return String(s==null?'':s).replace(/[,，\t\r\n]/g,' ').replace(/[ 　]{2,}/g,' ').trim(); }
+function runAi(){
+  if(!imgs.length){ flash('imgMsg','さきに発注書の画像を読み込んでください。',false); return; }
+  var btn=document.getElementById('aiBtn');
+  btn.disabled=true; btn.textContent='AIが読んでいます…（30秒〜1分ほど）';
+  ocrStat(0.3,'AIに画像を送って読ませています。そのままお待ちください。');
+  var names=(S.products||[]).map(function(g){ return pname(g); });
+  callAi('order',{products:names}).then(function(j){
+    var ls=j.lines||[];
+    if(!ls.length) throw new Error('注文の行が見つかりませんでした');
+    var unsure=[];
+    document.getElementById('txtPaste').value = ls.map(function(l){
+      var nm=clean(l.match)||clean(l.written);
+      if(l.unsure) unsure.push(nm);
+      return nm+','+String(l.qty||'').replace(/[^0-9０-９]/g,'')+','+clean(l.memo);
+    }).join('\n');
+    ocrStat(1,'読み取りが終わりました。');
+    mode('paste');
+    var msg='AIが '+ls.length+'行 読み取りました。左の発注書と見くらべて、ちがうところを直してから「読み取って明細に入れる」を押してください。';
+    if(unsure.length) msg+='　⚠ AIが自信のない行：'+unsure.join('／');
+    if(j.note) msg+='　⚠ AIからの注意：'+j.note;
+    flash('pasteMsg', msg, !(unsure.length||j.note));
+    document.getElementById('txtPaste').scrollIntoView({block:'center',behavior:'smooth'});
+  }).catch(function(e){
+    document.getElementById('ocrProg').style.display='none';
+    flash('imgMsg','AIで読み取れませんでした（'+e.message+'）。もう一度押すか、下の「パソコンの機能を使う方法」をお試しください。',false);
+  }).then(function(){
+    btn.disabled=false; btn.textContent='AIで読み取る（おすすめ）';
+  });
+}
+function bulkAi(){
+  if(!imgs.length){ flash('bulkMsg','さきに「写真をえらんで左に出す」で写真を読み込んでください。',false); return; }
+  var btn=document.getElementById('bulkAiBtn');
+  btn.disabled=true; btn.textContent='AIが読んでいます…（30秒〜1分ほど）';
+  var prog=document.getElementById('bulkOcrProg'); prog.style.display='block';
+  document.getElementById('bulkBar').style.width='30%';
+  document.getElementById('bulkStat').textContent='AIに画像を送って読ませています。そのままお待ちください。';
+  callAi('bulk').then(function(j){
+    document.getElementById('bulkText').value=(j.lines||[]).map(function(l){ return String(l).trim(); }).filter(function(l){return l;}).join('\n');
+    document.getElementById('bulkBar').style.width='100%';
+    document.getElementById('bulkStat').textContent='読み取りが終わりました。';
+    bulkPreview();
+    flash('bulkMsg','下書きを入れました。左の写真と1行ずつ見くらべて直してください。'+(j.note?'　⚠ AIからの注意：'+j.note:''),false);
+  }).catch(function(e){
+    prog.style.display='none';
+    flash('bulkMsg','AIで読み取れませんでした（'+e.message+'）。',false);
+  }).then(function(){
+    btn.disabled=false; btn.textContent='左の写真をAIで読み取って下書きにする';
   });
 }
 
