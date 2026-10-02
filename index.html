@@ -231,7 +231,7 @@ table.nou td.lbl{text-align:center}
   #printArea{padding:11mm 0;box-sizing:border-box;
     -webkit-box-decoration-break:clone;box-decoration-break:clone}
   body{background:#fff}
-  .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn{display:none !important}
+  .head,.tabs,main,#imgPanel,#storeWarn,#newVer,#rescueWarn,#fileWarn,#staleWarn,#bootWarn,#partsWarn{display:none !important}
   body.withimg{padding-left:0 !important}
   #printArea{display:block !important}
   .sheet{width:175mm;margin:0 auto;padding:0}
@@ -239,6 +239,21 @@ table.nou td.lbl{text-align:center}
 </style>
 </head>
 <body>
+
+<!-- ★JavaScript が切られていると、タブも切り替わらず、AIの枠も出ず、
+     画面は「①納品書をつくる」のまま固まる。本人には区別がつかないので、ここで知らせる。
+     （2026-10-02：Safariの「開発」メニューで切った可能性を潰せなかった事例から） -->
+<noscript>
+  <div style="background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:16px 20px;font-weight:700;font-size:16px">
+    ⚠ このブラウザで JavaScript が切られています。<b>この画面はほとんど動きません。</b><br>
+    <span style="font-weight:400">
+    タブの切り替えも、AIの読み取りもできません。次の手順で戻してください。<br>
+    <b>Safari</b>：メニューバーの「<b>開発</b>」→「<b>JavaScript を無効にする</b>」の<b>チェックを外す</b>
+    （「開発」が無いときは、Safari →「設定」→「詳細」→「Web デベロッパ用の機能を表示」）<br>
+    <b>Chrome</b>：アドレス欄左の 🔒 →「サイトの設定」→「JavaScript」を「許可」
+    </span>
+  </div>
+</noscript>
 
 <div class="head">
   <h1>納品書 作成システム</h1>
@@ -263,6 +278,44 @@ table.nou td.lbl{text-align:center}
   ⚠ このパソコンでは、台帳の自動保存ができません。<br>
   <span style="font-weight:400">画面を閉じると、足した取引先や商品が消えます。作業のあとに必ず
   「③設定 → E データの持ち出し → ファイルに書き出す」をして、次に開いたときに「ファイルから読み込む」をしてください。</span>
+</div>
+
+<div id="fileWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
+  ⚠ これはパソコンに保存されたファイルを開いています。<b>新しい版が出ても、ここには反映されません。</b><br>
+  <span style="font-weight:400">
+  いつも次のアドレスから開いてください。こちらは自動で新しくなります。<br>
+  <a href="https://soomine-svg.github.io/nouhinsho/" style="color:#8e1111">https://soomine-svg.github.io/nouhinsho/</a><br>
+  ブックマークに入れておくと、次からすぐ開けます。
+  </span>
+</div>
+
+<div id="partsWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
+  ⚠ この画面に、あるはずの部品がありません。<b>古い版か、別の写しを見ている可能性があります。</b><br>
+  <span style="font-weight:400">
+  足りないもの：<b id="partsMiss"></b>　／　この画面の版：<b id="partsVer"></b><br>
+  アドレスの末尾に <b>?2</b> を付けて開き直してください
+  （例：https://soomine-svg.github.io/nouhinsho/?2）。直らなければ大峯までお知らせください。
+  </span>
+</div>
+
+<div id="bootWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
+  ⚠ 起動の途中で止まりました。<b>画面の一部が動きません。</b><br>
+  <span style="font-weight:400">
+  出たことば：<b id="bootMsg"></b><br>
+  このことばを大峯までお知らせください。<br>
+  「③設定 → E → ひとつ前の状態に戻す」で直ることがあります。台帳は消えません。
+  </span>
+</div>
+
+<div id="staleWarn" style="display:none;background:#fdecec;border-bottom:3px solid #c62828;color:#8e1111;padding:14px 20px;font-weight:700">
+  ⚠ 新しい版（<span id="staleSrv"></span>）に切り替えようとしましたが、<b>古い版（<span id="staleCur"></span>）のままです。</b><br>
+  <span style="font-weight:400">
+  このパソコンかインターネット回線の途中に、古い写しを配っているものがあります。次の順に試してください。<br>
+  ① <b>強制的な再読み込み</b>（Mac：⌘ + Shift + R ／ Windows：Ctrl + F5）<br>
+  ② それでも変わらなければ <b>シークレット ウインドウ</b>で開く（Mac：⌘ + Shift + N ／ Windows：Ctrl + Shift + N）<br>
+  ③ それでも古いままなら、<b>別のブラウザ</b>（Edge・Safari など）で開く<br>
+  ②で新しくなるのに①で変わらない場合は、このブラウザの保存データか拡張機能が原因です。大峯までお知らせください。
+  </span>
 </div>
 
 <div class="tabs">
@@ -414,8 +467,13 @@ table.nou td.lbl{text-align:center}
         </div>
         <div id="imgList" style="margin-top:14px"></div>
 
-        <div id="ocrBox" class="picker" style="margin-top:16px;display:none">
-          <h4>文字を読み取る</h4>
+        <!-- ★枠ごと消さない。消えると「ボタンが無い」としか見えず、原因にたどり着けない。
+             （2026-10-02：友人の画面でAIの入口が見つからなかった件） -->
+        <div id="ocrBox" class="picker" style="margin-top:16px">
+          <h4>AIで読み取る</h4>
+          <div id="ocrNone" class="hint" style="margin:0 0 10px">
+            <b>まず上で発注書の写真を出してください。</b>写真を出すと、下のボタンで読み取れます。
+          </div>
           <button class="btn" id="aiBtn" onclick="runAi()">AIで読み取る（おすすめ）</button>
           <!-- 予備（AIなし・Tesseract）。友人が迷うので非表示（2026-10-02 本人指示）。機能は残してある -->
           <button class="btn sub" id="ocrBtn" onclick="runOcr()" style="display:none">AIを使わずに読み取る</button>
@@ -671,7 +729,7 @@ table.nou td.lbl{text-align:center}
   </div>
 
   <div class="step">
-    <h2><span class="n">D+</span>まとめて入れる（写真を見ながら）</h2>
+    <h2><span class="n">D+</span>まとめて入れる（写真を見ながら・AI読み取り）</h2>
     <div class="body">
       <div class="note" style="background:#eef2f7;border-color:#c9d2dd">
         <b>写真を選んでも、自動では入りません。</b>下の①〜⑤を順に進めてください。
@@ -824,8 +882,12 @@ table.nou td.lbl{text-align:center}
   <div class="step">
     <h2><span class="n">3</span>発注書の文字を読み取る</h2>
     <div class="body">
-      <p style="margin-top:0">「発注書の画像を見ながら入れる」で画像を読み込むと、「<b>文字を読み取る</b>」ボタンが出ます。
-        <b>はじめの1回だけ、インターネットにつながっている必要があります</b>（読み取りの部品を取り込むため）。費用はかかりません。</p>
+      <p style="margin-top:0">
+        <b>① 上の「① 納品書をつくる」を押す</b>　→　<b>②「2 商品を入れる」の中の「発注書の画像を見ながら入れる」を押す</b>
+        　→　<b>③「パソコンから写真・ファイルをえらぶ」で発注書の写真を出す</b>
+        　→　<b>④「AIで読み取る（おすすめ）」を押す</b>。<br>
+        ③で写真を出すまで、④のボタンは出ません。<br>
+        <b>インターネットにつながっている必要があります。</b>はじめの1回だけ、合いことばを聞かれます（大峯からお伝えします）。</p>
       <p><b>読み取った文字は、いきなり明細には入りません。</b>「発注書を貼りつける」の欄に入るだけです。
         左の画像と見くらべて、ちがうところを直してから明細に入れてください。</p>
       <p style="margin-bottom:0;color:var(--warn);font-weight:700">⚠ きれいな印刷はよく読めますが、手書きやかすれたFAXは正しく読めません。
@@ -961,7 +1023,7 @@ table.nou td.lbl{text-align:center}
    ====================================================================== */
 
 var KEY = 'nouhinsho_v1';
-var APPVER = '2026-10-02-c';   /* 版。困ったときに「どの版か」を伝えるため */
+var APPVER = '2026-10-02-h';   /* 版。困ったときに「どの版か」を伝えるため */
 
 /* --- 初期データ：空。台帳は「③設定」で入れるか、台帳ファイルを読み込みます。 --- */
 var SELF0 = { co:'', addr:'', tel:'', fax:'', inv:'' };
@@ -1172,7 +1234,8 @@ function imgClear(){
 }
 function renderImgList(){
   var w=document.getElementById('imgList');
-  document.getElementById('ocrBox').style.display = imgs.length?'block':'none';
+  /* 枠は出したまま。写真が無いときは中の案内だけ出す */
+  var on=document.getElementById('ocrNone'); if(on) on.style.display = imgs.length?'none':'block';
   if(!imgs.length){ w.innerHTML=''; return; }
   w.innerHTML='<table class="grid"><thead><tr><th>読み込んだ発注書</th><th style="width:230px"></th></tr></thead><tbody>'+
     imgs.map(function(f,i){
@@ -1431,7 +1494,13 @@ function load(){
   var ok = false;
   try{
     var d = JSON.parse(raw);
-    if(d && d.self && Array.isArray(d.partners) && Array.isArray(d.products)){ S = d; ok = true; }
+    /* ★形だけでなく、中身が「物」になっているかまで見る。
+       たとえば products に null が1つ混じっているだけで、下の forEach が落ちて
+       起動が丸ごと止まる。コンソールから手で書き換えたときに起こりうる。 */
+    if(d && d.self && typeof d.self==='object'
+       && Array.isArray(d.partners) && Array.isArray(d.products)
+       && d.partners.every(function(x){ return x && typeof x==='object'; })
+       && d.products.every(function(x){ return x && typeof x==='object'; })){ S = d; ok = true; }
   }catch(e){}
   if(!ok){
     /* ここが肝心：黙って空にしない。読めなかった中身は退避して、画面で知らせる。 */
@@ -1522,35 +1591,87 @@ function flash(id,text,ok){ var e=document.getElementById(id); e.textContent=tex
    GitHub Pages は「10分間は再確認しなくてよい」と指示するため、
    ふつうに再読み込みしてもブラウザが古いものを出し続けることがある。
    そこで、アプリ自身がサーバーに直接聞きに行って、版が変わっていたら知らせる。 */
-var newVerFound=null, lastVerCheck=0;
+var newVerFound=null, lastVerCheck=0, verCheckOk=false, verCheckErr='', verServer='';
+
+/* ★新しい版を見つけたら、入力中でなければ自分で切り替える。
+   ただし「切り替えたのに、まだ古いまま」のときは二度と繰り返さず、原因を画面に出す。
+   （2026-10-02：正しいURL・Service Workerも無いのに古い版のまま、という事例から。
+     ブラウザや回線の途中に古い写しを配るものがあると、更新しても延々このまま） */
+var AUTOVER_KEY='nouhinsho_v1_autover';
+function autoApplyNewVer(ver){
+  var tried='';
+  try{ tried=sessionStorage.getItem(AUTOVER_KEY)||''; }catch(e){}
+
+  if(tried===ver){
+    /* 一度切り替えたのに、まだ古いものが返ってきている＝自分では直せない */
+    var sb=document.getElementById('staleWarn');
+    if(sb){
+      document.getElementById('staleSrv').textContent=ver;
+      document.getElementById('staleCur').textContent=APPVER;
+      sb.style.display='block';
+    }
+    return;
+  }
+  /* 入力しかけの納品書があるときは消さない。帯から本人に選んでもらう */
+  if(cur && cur.lines && cur.lines.length) return;
+
+  try{ sessionStorage.setItem(AUTOVER_KEY, ver); }catch(e){}
+  location.replace(location.pathname+'?v='+ver);
+}
 function checkNewVersion(force){
-  if(location.protocol==='file:') return;           /* ファイルで開いているときは何もしない */
+  /* ★ファイルとして開いていると、何度更新しても古いまま。黙って帰らずに画面で知らせる。
+     （2026-10-02：友人の画面に新しいボタンが出ない、の原因候補。気づく手がかりがゼロだった） */
+  if(location.protocol==='file:'){
+    var fw=document.getElementById('fileWarn'); if(fw) fw.style.display='block';
+    verCheckErr='ファイルとして開いています';
+    return;
+  }
   if(newVerFound) return;                            /* もう見つけて知らせている */
   if(printing) return;                               /* 印刷画面が開いているあいだは何もしない */
   var now=Date.now();
   if(!force && now-lastVerCheck < 20000) return;     /* 立て続けに聞きに行かない */
   lastVerCheck=now;
   var url=location.pathname+'?vc='+now;
-  fetch(url,{cache:'no-store'}).then(function(r){ return r.ok?r.text():null; }).then(function(txt){
-    if(!txt) return;
+  fetch(url,{cache:'no-store'}).then(function(r){
+    if(!r.ok) throw new Error('サーバーが '+r.status+' を返しました');
+    return r.text();
+  }).then(function(txt){
     var m=txt.match(/APPVER\s*=\s*'([^']+)'/);
-    if(m && m[1] && m[1]!==APPVER){
+    if(!m || !m[1]) throw new Error('版の番号が読み取れませんでした');
+    verCheckOk=true; verCheckErr=''; verServer=m[1];
+    if(m[1]!==APPVER){
       newVerFound=m[1];
       document.getElementById('newVerNo').textContent=m[1];
       document.getElementById('curVerNo').textContent=APPVER;
       document.getElementById('newVer').style.display='block';
+      autoApplyNewVer(m[1]);
     }
-  }).catch(function(){});
+  }).catch(function(e){
+    /* ★失敗を握りつぶさない。黙って消すと「確かめた＝最新」と誤解する */
+    verCheckOk=false;
+    verCheckErr=(e && e.message) ? e.message : '通信できませんでした';
+  });
 }
 function manualVerCheck(btn){
   var m=document.getElementById('verMsg');
-  if(location.protocol==='file:'){ m.textContent='ファイルとして開いているため、確かめられません。'; return; }
-  btn.disabled=true; m.textContent='確かめています…';
+  if(location.protocol==='file:'){
+    m.innerHTML='<b style="color:#c62828">ファイルとして開いているため、確かめられません。'
+      + '画面のいちばん上の赤い帯のアドレスから開き直してください。</b>';
+    return;
+  }
+  btn.disabled=true; m.textContent='確かめています…'; verCheckOk=false; verCheckErr='';
   checkNewVersion(true);
   setTimeout(function(){
     btn.disabled=false;
-    if(newVerFound){ m.innerHTML='<b style="color:#2e7d32">新しい版があります。画面のいちばん上の帯から切り替えてください。</b>'; }
-    else { m.textContent='いまがいちばん新しい版です。'; }
+    /* ★「最新です」だけだと、サーバーが古い写しを返していても気づけない。
+         サーバーから返ってきた版を必ず並べて見せる（2026-10-02の切り分けで必要だった） */
+    var pair='<br><span style="font-size:13px;color:#666">サーバーの答え：<b>'+esc(verServer||'—')
+           + '</b>　／　この画面：<b>'+esc(APPVER)+'</b></span>';
+    if(newVerFound){ m.innerHTML='<b style="color:#2e7d32">新しい版があります。画面のいちばん上の帯から切り替えてください。</b>'+pair; }
+    /* ★確かめられなかったのに「最新です」と言わない。これを言うと、古い画面のまま納得してしまう */
+    else if(!verCheckOk){ m.innerHTML='<b style="color:#c62828">確かめられませんでした（'+esc(verCheckErr||'通信できません')+'）。'
+      + 'インターネットにつながっているか確かめて、もう一度押してください。</b>'; }
+    else { m.innerHTML='いまがいちばん新しい版です。'+pair; }
   }, 1500);
 }
 function applyNewVer(){
@@ -3566,7 +3687,32 @@ function boot(){
   /* はじめて開いたときは「使い方」から見せる */
   if(firstRun){ showPage('help'); firstRun=false; save(); }
 }
-load(); loadUI(); checkStore(); showRescue(); boot();
+/* ★自己診断：この版が持っているはずの部品が画面に無いなら、
+   見ているHTMLがこの版ではない（古い写し・別の写し・途中で削られた）。
+   版の文字だけ合っていて中身が違う、という今回いちばん手こずった型を捕まえる。 */
+function selfCheck(){
+  var need=['bulkAiBtn','aiBtn','ocrBox','mdImg','tabMaster'];
+  var miss=need.filter(function(id){ return !document.getElementById(id); });
+  if(!miss.length) return;
+  var b=document.getElementById('partsWarn');
+  if(b){
+    document.getElementById('partsMiss').textContent=miss.join('、');
+    document.getElementById('partsVer').textContent=APPVER;
+    b.style.display='block';
+  }
+}
+
+/* ★起動の途中で例外が出ると、ここから下（版チェックの登録など）が丸ごと走らない。
+   黙って半分だけ動く状態がいちばん分かりにくいので、つかまえて画面に出す。 */
+try{
+  load(); loadUI(); checkStore(); showRescue(); boot(); selfCheck();
+}catch(e){
+  var eb=document.getElementById('bootWarn');
+  if(eb){
+    document.getElementById('bootMsg').textContent=(e && e.message)?e.message:String(e);
+    eb.style.display='block';
+  }
+}
 checkNewVersion(true);
 setInterval(function(){ checkNewVersion(true); }, 5*60*1000);
 /* この画面に戻ってきたとき・窓を選び直したときにも確かめる。
